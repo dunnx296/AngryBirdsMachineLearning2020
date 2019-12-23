@@ -45,6 +45,8 @@ Pre-compiled Science Birds for different platforms are in folder:
 
 <code>java -jar  game_playing_interface.jar</code>
 
+- Note: if you restart the game playing interface you will have to wait for about one minute, otherwise you will get an error message that the ports are still in use. 
+
 2. Run the Science Birds game executable file to start a game instance
 	- The Science Birds game used in this framework is a modified version of Lucas N. Ferreira's work that can be found in his [Github repository](https://github.com/lucasnfe/science-birds)
 3. Run the Python agent 
@@ -76,7 +78,7 @@ Pre-compiled Science Birds for different platforms are in folder:
 
 in folder levelgenerator
   - the level generator is based on Matthew Stephenson's work. 
-  - the latest changes on the level generator can be found in his [repository](https://github.com/stepmat/IratusAves/tree/Sail-on) 
+  - a new version of the level generator that allows you to control many different parameters can be found [here](https://github.com/stepmat/IratusAves/tree/Sail-on).
 
 4. A brief description about the level generator is [here](#generate)
 5. A detailed description of the level generator is [here](levelgenerator/README.md)
