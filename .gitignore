@@ -1,0 +1,11 @@
+*/__pycache__/*
+*.egg-info
+*.pyc
+/.idea/
+/build/
+/dist/
+/DB/
+*.txt
+*.DS_Store
+!requirements.txt
+!levelgenerator/parameters.txt
