@@ -27,7 +27,7 @@ class AgentClient():
         self.server_port = int(configuration['port'])
         self.server_host = configuration['host']
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #self.server_socket.settimeout(100)
+        self.server_socket.settimeout(100)
         self.request_bytes_size = configuration['requestbufbytes']
 
     # INITIALIZATION
