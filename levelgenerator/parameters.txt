@@ -1,5 +1,0 @@
-8
-5
-stone Triangle,stone TriangleHole,stone Circle,stone CircleSmall
-1,1
-10

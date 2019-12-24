@@ -100,7 +100,7 @@ This framework provided the following components:
 	- located in ./levelgenerator
 	- use the command:
 
-	<code>python3 generator_competition.py</code>
+	<code>python3 IratusAves.py</code>
 	
 	to generator levels
 
