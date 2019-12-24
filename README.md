@@ -16,7 +16,7 @@
 ## Requirements<a name="Requirements"></a>
 This system has been tested on
 - Ubuntu 18.04
-- MacOS 10.9 and 10.12
+- MacOS 10.12 and 10.15
 - Windows 10
 #### Java Environment<a name="Java"></a>
 
