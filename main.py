@@ -1,5 +1,8 @@
+import logging
 import src.demo.naive_agent_groundtruth as na
 
+logging.basicConfig(level=logging.INFO)
+
 if __name__ == "__main__":
-	na = na.ClientNaiveAgent()
-	na.run()
+    agent = na.ClientNaiveAgent()
+    agent.run()
