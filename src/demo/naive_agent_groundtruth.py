@@ -23,7 +23,7 @@ class ClientNaiveAgent(Thread):
         with open('./src/client/server_client_config.json', 'r') as config:
             sc_json_config = json.load(config)
 
-        self.ar = AgentClient(sc_json_config[0])
+        self.ar = AgentClient(**sc_json_config[0])
         try:
             self.ar.connect_to_server()
         except socket.error as e:
