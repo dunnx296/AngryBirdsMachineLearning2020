@@ -1,5 +1,5 @@
 # Science Birds Basic Game Playing Software
-#### <p style="text-align: center;"> Pre-Alpha v 0.1 </p>
+#### <p style="text-align: center;"> Alpha v 0.1 </p>
 
 ## Table of contents
 1. [Requirements](#Requirements)
@@ -16,7 +16,7 @@
 ## Requirements<a name="Requirements"></a>
 This system has been tested on
 - Ubuntu 18.04
-- MacOS 10.12 and 10.15
+- MacOS 10.9 and 10.12
 - Windows 10
 #### Java Environment<a name="Java"></a>
 
@@ -44,8 +44,6 @@ Pre-compiled Science Birds for different platforms are in folder:
 	- use the code below to run:
 
 <code>java -jar  game_playing_interface.jar</code>
-
-- Note: if you restart the game playing interface you will have to wait for about one minute, otherwise you will get an error message that the ports are still in use. 
 
 2. Run the Science Birds game executable file to start a game instance
 	- The Science Birds game used in this framework is a modified version of Lucas N. Ferreira's work that can be found in his [Github repository](https://github.com/lucasnfe/science-birds)
@@ -78,7 +76,7 @@ Pre-compiled Science Birds for different platforms are in folder:
 
 in folder levelgenerator
   - the level generator is based on Matthew Stephenson's work. 
-  - a new version of the level generator that allows you to control many different parameters can be found [here](https://github.com/stepmat/IratusAves/tree/Sail-on).
+  - the latest changes on the level generator can be found in his [repository](https://github.com/stepmat/IratusAves/tree/Sail-on) 
 
 4. A brief description about the level generator is [here](#generate)
 5. A detailed description of the level generator is [here](levelgenerator/README.md)
@@ -152,55 +150,52 @@ The ./src folder contains all the source code of the python naive agent. The age
 
 1. Ground truth data of game objects are stored in a Json object. The json object describs an array where each element describes a game object. Game object categories and their properties are described below:
 	- Ground: the lowest unbreakable flat support surface 
+		- property: id = 'object [i]' 
 		- property: type = 'Ground'
 		- property: yindex = [the y coordinate of the ground line]
 	- Platform: Unbreakable obstacles
-		- property: type = 'Platform'
+		- property: id = 'object [i]'	
+		- property: type = 'Object'
 		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
+		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]
+	- Trajectory: the dots that represent the trajectories of the birds
+		- property: id = 'object [i]'
+		- property: type = 'Trajectory'
+		- property: location = [a list of 2d points that represents the trajectory dots]
+
 	- Slingshot: Unbreakable slingshot for shooting the bird
+		- property: id = 'object [i]'
 		- property: type = 'Slingshot'
 		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
+		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]
 	- Red Bird:
-		- property: type = 'red_bird'
+		- property: id = 'object [i]'
+		- property: type = 'Object'
 		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
+		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]	
+	- all objects below have the same representation as red bird
 	- Blue Bird:
-		- property: type = 'blue_bird'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
 	- Yellow Bird:
-		- property: type = 'yellow_bird'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]	
-	- White Bird:
-		- property: type = 'white_bird'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
+	- White Bird:	
 	- Black Bird:
-		- property: type = 'black_bird'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]		
 	- Small Pig:
-		- property: type = 'pig_basic_small'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
 	- Medium Pig:
-		- property: type = 'pig_basic_medium'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
 	- Big Pig:
-		- property: type = 'pig_basic_big'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
 	- TNT: an explosive block
-		- property: type = 'TNT'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
 	- Wood Block: Breakable wooden blocks
-		- property: type = 'Wood'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
 	- Ice Block: Breakable ice blocks
-		- property: type = 'Ice'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
 	- Stone Block: Breakable stone blocks
-		- property: type = 'Stone'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]	
+	
 2. ./src/computer_vision/GroundTruthReader.py is sample tool to read the parse ground truth json object. The coordination system are from the Science Birds and has been converted to the agent's coordination system.
 3. Round objects are also represented as polygons with a list of vertices
 4. Ground truth with noise
 	- If noisy ground truth is requested, the noise will be applied to each point in vertices of the game objects except the **ground**, **all birds** and the **slingshot**
-	- The position of the point with noise can be anywhere in the circle with the point's truth position as centre and 5 pixels as radius
+	- The noise for 'vertices' is applied to all vertices with the same amount within 5 pixels
+	- The colour map has a noise of +/- 2%. 
+	- The colour is the colour map compresses 24 bit RGB colour into 8 bit
+	    - 3 bits for Red, 3 bits for Green and 2 bits for Blue
+		- the percentage of the colour that accounts for the object is followed by colour
+		- example: (127, 0.5) means 50% pixels in the objects are with colour 127  
 	- The noise is uniformly distributed
 	- We will later offer more sophisticated and adjustable noise. 
 ## Communication Protocols<a name="Protocol"></a>
@@ -237,6 +232,14 @@ The ./src folder contains all the source code of the python naive agent. The age
 			</td>	
 		</tr>	
 		<tr>
+			<td>2</td>
+			<td>Set simulation speed<br />speed$\in$[0.0, 50.0]
+			<br />Note: this command can be sent at anytime during playing to change the simulation speed</td>
+			<td>[2][speed]<br />speed: 4 bytes</td>
+			<td>OK/ERR</td>
+			<td>[1]/[0]</td>	
+		</tr>	
+		<tr>
 			<td>11-30</td>
 			<td colspan=4>Query Messages</td>		
 		</tr>
@@ -263,14 +266,6 @@ The ./src folder contains all the source code of the python naive agent. The age
 			[7]: LOST</td>
 		</tr>
 		<tr>
-			<td>13</td>
-			<td>Get best scores</td>
-			<td>[13]</td>
-			<td>A fixed length (21 * 4bytes)bytes array with every four slots<br/> indicates a best score for the corresponding level</td>
-			<td>[score_level1]....[score_level21]<br/>
-			Note: This should not be used for the training mode.</td>
-		</tr>
-		<tr>
 			<td>14</td>
 			<td>Get the current level</td>
 			<td>[14]</td>
@@ -288,9 +283,9 @@ The ./src folder contains all the source code of the python naive agent. The age
 			<td>23</td>
 			<td>Get my score</td>
 			<td>[23]</td>
-			<td>A fixed length (21*4) bytes array with every four<br/> slots indicates a best score for the corresponding level</td>
-			<td>[score_level1]....[score_level21]<br/>
-			Note: This should not be used for the training mode, <br/>
+			<td>A ([number_of_levels] * 4) bytes array with every four<br/> slots indicates a best score for the corresponding level</td>
+			<td>[score_level_1]....[score_level_n]<br/>
+			Note: This should be used carefully for the training mode, <br/>
 			becaues there may be large amount of levels used in the training.<br/>
 			Instead, when the agent is in winning state,<br/>
 			use message ID 65 to get the score of a single level at winning state</td>
@@ -399,7 +394,7 @@ The ./src folder contains all the source code of the python naive agent. The age
 		</tr>
 		<tr>
 			<td>61-70</td>
-			<td colspan=4>Training Mode Specific Messages</td>		
+			<td colspan=4>Science Birds Specific Messages</td>		
 		</tr>
 		<tr>
 			<td>61</td>

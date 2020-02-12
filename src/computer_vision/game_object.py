@@ -1,5 +1,3 @@
-import sys
-sys.path.append('./src')
 from computer_vision.cv_utils import Rectangle
 from enum import Enum
 

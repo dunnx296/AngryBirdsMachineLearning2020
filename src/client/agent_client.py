@@ -31,6 +31,7 @@ class RequestCodes(Enum):
     """Codes for different requests"""
     DoScreenShot = 11
     Configure = 1
+    SetGameSimulationSpeed = 2
     LoadLevel = 51
     RestartLevel = 52
     Cshoot = 31
@@ -39,7 +40,6 @@ class RequestCodes(Enum):
     FullyZoomOut = 34
     GetNoOfLevels = 15
     GetCurrentLevel = 14
-    GetBestScores = 13
     ShootSeq = 11
     CFastshoot = 41
     PFastshoot = 42
@@ -64,6 +64,7 @@ class AgentClient:
             playing_mode=PlayingMode.TRAINING,
             **kwargs
     ):
+
         self.server_port = int(port)
         self.server_host = host
         self.playing_mode = playing_mode
@@ -72,7 +73,7 @@ class AgentClient:
         self._buffer = bytearray()
         self._logger = logging.getLogger("AgentClient")
         self._extra_args = kwargs
-
+        logging.getLogger().setLevel(logging.INFO)
     def _read_raw_from_buff(self, size):
         """Read a specific number of bytes from server_socket"""
         self._logger.debug("Reading %s bytes from server", size)
@@ -154,6 +155,13 @@ class AgentClient:
         )
         return (round_number, limit, levels)
 
+    def set_game_simulation_speed(self, simulation_speed):
+        self._logger.info("Sending set simulation speed request")
+        self._send_command(RequestCodes.SetGameSimulationSpeed, "I", simulation_speed)
+        response = self._read_from_buff("B")[0]
+        self._logger.info("Simulation speed is set to %d", simulation_speed)
+        return response
+
     def read_image_from_stream(self):
         """Read image from server_socket"""
         (width, height) = self._read_from_buff("II")
@@ -168,7 +176,12 @@ class AgentClient:
     def read_ground_truth_from_stream(self):
         """Read Ground Truth fro sever_socket"""
         msg_length = self._read_from_buff("I")[0]
-        data = self._read_raw_from_buff(msg_length)
+        data = b''
+        while len(data) < msg_length:
+            packet = self.server_socket.recv(msg_length - len(data))
+            if not packet:
+                return None
+            data += packet
         data_string = data.decode("UTF-8")
         data_string = data_string[:-5]
         return json.loads(data_string)
@@ -205,14 +218,14 @@ class AgentClient:
         self._send_command(code, "iiiiii", fx, fy, dx, dy, t1, t2)
         return self._read_from_buff("B")[0]
 
-    def get_all_level_scores(self):
+    def get_all_level_scores(self,n_levels):
         if self.playing_mode != PlayingMode.COMPETITION:
             self._logger.warning(
                 "GetAllLevelScores is not recommended in %s",
                 self.playing_mode
             )
         self._send_command(RequestCodes.GetAllLevelScores)
-        return self._read_from_buff("" + 20 * "I")
+        return self._read_from_buff("" + n_levels * "I")
 
     def get_current_score(self):
         self._send_command(RequestCodes.GetCurrentLevelScore)
@@ -274,9 +287,7 @@ if __name__ == "__main__":
         info = client.load_level(3)
         client.do_screenshot()
         level = client.get_current_level()
-        print("current level ", level)
-        score = client.get_all_level_scores()
-        print("score ", score)
+
         client.fully_zoom_in()
         client.fully_zoom_out()
         info = client.shoot(172, 276, 943, 264, 0, 0, False)

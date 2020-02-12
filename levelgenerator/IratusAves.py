@@ -19,6 +19,9 @@ number_levels = 10
 minimum_number_pigs = 4
 maximum_number_pigs = 8
 
+# Precision for the values in the level file
+rounding_digits_file_write = 4
+
 # Weight multiplier on the number of birds in the level
 # Increasing or decreasing the value for "number_birds_weight" will affect the levels difficulty
 # E.g. increasing this value to 2.0 will give the player twice as many birds as normal (easier level)
@@ -2001,33 +2004,33 @@ def write_level_xml(final_blocks, selected_other, final_pig_positions, final_pla
         rotation = 0
         if (i[0] in (3,7,9,11,13)):
             rotation = 90
-        f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="%s" />\n' % (block_names[str(i[0])],materials[str(j)], str(i[1]), str(i[2]), str(rotation)))
+        f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="%s" />\n' % (block_names[str(i[0])],materials[str(j)], str(round(i[1],rounding_digits_file_write)), str(round(i[2],rounding_digits_file_write)), str(round(rotation,rounding_digits_file_write))))
 
     for i in selected_other:
         material = materials[str(choose_item(probability_table_materials))]       # material is chosen randomly
         if i[0] == '1':
-            f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="0" />\n' % (additional_objects[i[0]], material, str(i[1]), str(i[2])))
+            f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="0" />\n' % (additional_objects[i[0]], material, str(round(i[1],rounding_digits_file_write)), str(round(i[2],rounding_digits_file_write))))
         if i[0] == '2':
             facing = randint(0,1)
-            f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="%s" />\n' % (additional_objects[i[0]], material, str(i[1]), str(i[2]), str(facing*90.0)))
+            f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="%s" />\n' % (additional_objects[i[0]], material, str(round(i[1],rounding_digits_file_write)), str(round(i[2],rounding_digits_file_write)), str(round(facing*90.0,rounding_digits_file_write))))
         if i[0] == '3':
-            f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="0" />\n' % (additional_objects[i[0]], material, str(i[1]), str(i[2])))
+            f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="0" />\n' % (additional_objects[i[0]], material, str(round(i[1],rounding_digits_file_write)), str(round(i[2],rounding_digits_file_write))))
         if i[0] == '4':
-            f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="0" />\n' % (additional_objects[i[0]], material, str(i[1]), str(i[2])))
+            f.write('<Block type="%s" material="%s" x="%s" y="%s" rotation="0" />\n' % (additional_objects[i[0]], material,str(round(i[1],rounding_digits_file_write)), str(round(i[2],rounding_digits_file_write))))
 
     for i in final_pig_positions:
-        f.write('<Pig type="BasicSmall" material="" x="%s" y="%s" rotation="0" />\n' % (str(i[0]),str(i[1])))
+        f.write('<Pig type="BasicSmall" material="" x="%s" y="%s" rotation="0" />\n' % (str(round(i[0],rounding_digits_file_write)),str(round(i[1],rounding_digits_file_write))))
 
     for i in final_tnt_positions:
-        f.write('<TNT type="" x="%s" y="%s" rotation="0" />\n' % (str(i[0]),str(i[1])))
+        f.write('<TNT type="" x="%s" y="%s" rotation="0" />\n' % (str(round(i[0],rounding_digits_file_write)),str(round(i[1],rounding_digits_file_write))))
         
 
     for i in final_platforms:
         for j in i:
-            f.write('<Platform type="Platform" material="" x="%s" y="%s" />\n' % (str(j[0]),str(j[1])))
+            f.write('<Platform type="Platform" material="" x="%s" y="%s" />\n' % (str(round(j[0],rounding_digits_file_write)),str(round(j[1],rounding_digits_file_write))))
 
     for i in extra_platforms_angled:
-            f.write('<Platform type="Platform" material="" x="%s" y="%s" rotation="%s" scaleX="%s" />\n' % (str(i[0]),str(i[1]),str(i[2]),str(i[3])))
+            f.write('<Platform type="Platform" material="" x="%s" y="%s" rotation="%s" scaleX="%s" />\n' % (str(round(i[0],rounding_digits_file_write)),str(round(i[1],rounding_digits_file_write)),str(round(i[2],rounding_digits_file_write)),str(round(i[3],rounding_digits_file_write))))
         
     f.write('</GameObjects>\n')
     f.write('</Level>\n')
