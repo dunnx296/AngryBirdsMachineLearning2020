@@ -45,7 +45,7 @@ import time
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 TOTAL_STEPS = 1000000
-MODEL_PATH = "./RL/Models/ddqn_model"
+MODEL_PATH = "./src/demo/RL/Models/ddqn_model"
 
 class StateMaker():
     def __init__(self):
@@ -64,9 +64,9 @@ class StateMaker():
 class ClientRLAgent(Thread):
     def __init__(self):
         # Wrapper of the communicating messages
-        with open('../client/server_client_config.json', 'r') as config:
+        with open('./src/client/server_client_config.json', 'r') as config:
             sc_json_config = json.load(config)
-        self.ar = AgentClient(sc_json_config[0])
+        self.ar = AgentClient(**sc_json_config[0])
         try:
             self.ar.connect_to_server()
         except socket.error as e:
@@ -98,6 +98,7 @@ class ClientRLAgent(Thread):
             self.solved = self.solved[:levels]
 
         print('No of Levels: ' + str(levels))
+        return levels
 
     def get_next_level(self):
         level = (self.current_level + 1) % len(self.solved)
@@ -105,11 +106,11 @@ class ClientRLAgent(Thread):
             level = len(self.solved)
         return level
 
-    def check_my_score(self):
+    def check_my_score(self, n_levels):
         """
          * Run the Client (Naive Agent)
         *"""
-        scores = self.ar.get_all_level_scores()
+        scores = self.ar.get_all_level_scores(n_levels)
         print(" My score: ")
         level = 1
         for i in scores:
@@ -118,131 +119,135 @@ class ClientRLAgent(Thread):
                 self.solved[level - 1] = 1
             level += 1
 
+    def run(self):
+        while True:
+            try:
 
-while True:
-    try:
+                tf.reset_default_graph()
+                init = tf.global_variables_initializer()
+                state_maker = StateMaker()
 
-        rl_client = ClientRLAgent()
+                if not os.path.exists(MODEL_PATH):
+                    os.makedirs(MODEL_PATH)
 
-        tf.reset_default_graph()
-        init = tf.global_variables_initializer()
-        state_maker = StateMaker()
+                with tf.Session() as sess:
+                    sess.run(init)
 
-        if not os.path.exists(MODEL_PATH):
-            os.makedirs(MODEL_PATH)
+                    saver = tf.train.import_meta_graph(MODEL_PATH + '/model-ddqn.ckpt.meta')
+                    saver.restore(sess, tf.train.latest_checkpoint(MODEL_PATH + '/'))
+                    graph = tf.get_default_graph()
+                    online_in = graph.get_tensor_by_name('X_1:0')
 
-        with tf.Session() as sess:
-            sess.run(init)
+                    # Run loop
+                    info = self.ar.configure(self.id)
+                    self.solved = [0 for x in range(self.ar.get_number_of_levels())]
 
-            saver = tf.train.import_meta_graph(MODEL_PATH + '/model-ddqn.ckpt.meta')
-            saver.restore(sess, tf.train.latest_checkpoint(MODEL_PATH + '/'))
-            graph = tf.get_default_graph()
-            online_in = graph.get_tensor_by_name('X_1:0')
+                    max_scores = np.zeros([len(self.solved)])
 
-            # Run loop
-            info = rl_client.ar.configure(rl_client.id)
-            rl_client.solved = [0 for x in range(rl_client.ar.get_number_of_levels())]
+                    self.current_level = self.get_next_level()
+                    self.ar.load_level(self.current_level)
 
-            max_scores = np.zeros([len(rl_client.solved)])
-
-            rl_client.current_level = rl_client.get_next_level()
-            rl_client.ar.load_level(rl_client.current_level)
-
-            s = 'None'
-            d = False
-            first_time_in_level_in_episode = True
-
-            for env_step in range(1, TOTAL_STEPS):
-                game_state = rl_client.ar.get_game_state()
-                r = rl_client.ar.get_current_score()
-
-                if(game_state == GameState.UNSTABLE):
-                    rl_client.get_next_level()
-
-                # First check if we are in the won or lost state
-                # to adjust the reward and done flag if needed
-                if game_state == GameState.WON:
-                    # save current state before reloading the level
-                    s = rl_client.ar.do_screenshot()
-                    s = state_maker.make(sess, s)
-
-                    rl_client.check_my_score()
-                    rl_client.current_level = rl_client.get_next_level()
-                    rl_client.ar.load_level(rl_client.current_level)
-
-                    # Update reward and done
-                    d = 1
+                    s = 'None'
+                    d = False
                     first_time_in_level_in_episode = True
 
+                    for env_step in range(1, TOTAL_STEPS):
+                        game_state = self.ar.get_game_state()
+                        r = self.ar.get_current_score()
+                        print ('current score ', r)
 
-                elif game_state == GameState.LOST:
-                    # save current state before reloading the level
-                    s = rl_client.ar.do_screenshot()
-                    s = state_maker.make(sess, s)
+                        #if(game_state == GameState.UNSTABLE):
+                        #    self.get_next_level()
 
-                    # check for change of number of levels in the game
-                    rl_client.update_no_of_levels()
-                    rl_client.check_my_score()
-                    # If lost, then restart the level
-                    rl_client.failed_counter += 1
-                    if rl_client.failed_counter > 0:  # for testing , go directly to the next level
+                        # First check if we are in the won or lost state
+                        # to adjust the reward and done flag if needed
+                        if game_state == GameState.WON:
+                            # save current state before reloading the level
+                            s = self.ar.do_screenshot()
+                            s = state_maker.make(sess, s)
+                            n_levels = self.update_no_of_levels()
+                            print("number of levels " , n_levels)
+                            self.check_my_score(n_levels)
+                            self.current_level = self.get_next_level()
+                            self.ar.load_level(self.current_level)
 
-                        rl_client.failed_counter = 0
-                        rl_client.current_level = rl_client.get_next_level()
-                        rl_client.ar.load_level(rl_client.current_level)
-                    else:
-                        print("restart")
-                        rl_client.ar.restart_level()
-
-                    # Update reward and done
-                    d = 1
-                    first_time_in_level_in_episode = True
-
-
-                if(game_state == GameState.PLAYING):
-                    # Start of the episode
-                    if (first_time_in_level_in_episode):
-                        # If first time in level reset states
-                        s = 'None'
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        first_time_in_level_in_episode = False
-
-                    rl_client.get_slingshot_center()
-
-                    s = rl_client.ar.do_screenshot()
-                    s = state_maker.make(sess, s)
-
-                    a = sess.run(graph.get_tensor_by_name('ArgMax_1:0'), feed_dict={online_in: [s]})
-
-                    tap_time = int(random.randint(65, 100))
-                    ax_pixels = -int(40 * math.cos(math.radians(a)))
-                    ay_pixels = int(40 * math.sin(math.radians(a)))
-
-                    print("Shoot: " + str(ax_pixels) + ", " + str(ay_pixels) + ", " + str(tap_time))
-                    # Execute a in the environment
-                    rl_client.ar.shoot(int(rl_client.sling_center.X), int(rl_client.sling_center.Y), ax_pixels,
-                                       ay_pixels, 0, tap_time, False)
-
-                elif game_state == GameState.LEVEL_SELECTION:
-                    print("unexpected level selection page, go to the last current level : ", rl_client.current_level)
-                    rl_client.ar.load_level(rl_client.current_level)
-
-                elif game_state == GameState.MAIN_MENU:
-                    print("unexpected main menu page, reload the level : ", rl_client.current_level)
-                    rl_client.ar.load_level(rl_client.current_level)
-
-                elif game_state == GameState.EPISODE_MENU:
-                    print("unexpected episode menu page, reload the level: ", rl_client.current_level)
-                    rl_client.ar.load_level(rl_client.current_level)
+                            # Update reward and done
+                            d = 1
+                            first_time_in_level_in_episode = True
 
 
-    except Exception as e:
-        print("Error: ", e)
-    finally:
-        time.sleep(10)
+                        elif game_state == GameState.LOST:
+                            # save current state before reloading the level
+                            s = self.ar.do_screenshot()
+                            s = state_maker.make(sess, s)
+
+                            # check for change of number of levels in the game
+                            n_levels = self.update_no_of_levels()
+                            print("number of levels " , n_levels)
+                            self.check_my_score(n_levels)
+                            # If lost, then restart the level
+                            self.failed_counter += 1
+                            if self.failed_counter > 0:  # for testing , go directly to the next level
+
+                                self.failed_counter = 0
+                                self.current_level = self.get_next_level()
+                                self.ar.load_level(self.current_level)
+                            else:
+                                print("restart")
+                                self.ar.restart_level()
+
+                            # Update reward and done
+                            d = 1
+                            first_time_in_level_in_episode = True
+
+
+                        if(game_state == GameState.PLAYING):
+                            # Start of the episode
+                            if (first_time_in_level_in_episode):
+                                # If first time in level reset states
+                                s = 'None'
+                                self.ar.fully_zoom_out()
+                                self.ar.fully_zoom_out()
+                                self.ar.fully_zoom_out()
+                                self.ar.fully_zoom_out()
+                                self.ar.fully_zoom_out()
+                                self.ar.fully_zoom_out()
+                                self.ar.fully_zoom_out()
+                                first_time_in_level_in_episode = False
+
+                            self.get_slingshot_center()
+
+                            if self.sling_center == None:
+                                print ('sling ', self.sling_center)
+                                continue
+                            s = self.ar.do_screenshot()
+                            s = state_maker.make(sess, s)
+
+                            a = sess.run(graph.get_tensor_by_name('ArgMax_1:0'), feed_dict={online_in: [s]})
+
+                            tap_time = int(random.randint(65, 100))
+                            ax_pixels = -int(40 * math.cos(math.radians(a)))
+                            ay_pixels = int(40 * math.sin(math.radians(a)))
+
+                            print("Shoot: " + str(ax_pixels) + ", " + str(ay_pixels) + ", " + str(tap_time))
+                            # Execute a in the environment
+                            self.ar.shoot(int(self.sling_center.X), int(self.sling_center.Y), ax_pixels,
+                                               ay_pixels, 0, tap_time, False)
+
+                        elif game_state == GameState.LEVEL_SELECTION:
+                            print("unexpected level selection page, go to the last current level : ", self.current_level)
+                            self.ar.load_level(self.current_level)
+
+                        elif game_state == GameState.MAIN_MENU:
+                            print("unexpected main menu page, reload the level : ", self.current_level)
+                            self.ar.load_level(self.current_level)
+
+                        elif game_state == GameState.EPISODE_MENU:
+                            print("unexpected episode menu page, reload the level: ", self.current_level)
+                            self.ar.load_level(self.current_level)
+
+
+            except Exception as e:
+                print("Error: ", e)
+            finally:
+                time.sleep(10)

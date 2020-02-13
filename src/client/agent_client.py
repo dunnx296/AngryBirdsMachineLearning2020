@@ -166,13 +166,34 @@ class AgentClient:
         """Read image from server_socket"""
         (width, height) = self._read_from_buff("II")
         total_bytes = width * height * 3
-        image_bytes = self._read_raw_from_buff(total_bytes)
+        # Read the raw RGB data
+        read_bytes = 0
+        # read first bytes
+        image_bytes = self.server_socket.recv(2048)
+        read_bytes += image_bytes.__len__()
 
-        # check if  PIL is needed
-        rgb_image = Image.frombytes("RGB", (width, height), image_bytes)
-        self._logger.info('Received screenshot')
-        return np.array(rgb_image)
+        # read the rest
+        while (read_bytes < total_bytes):
+            byte_buffer = self.server_socket.recv(2048)
+            byte_buffer_length = byte_buffer.__len__()
+            if (byte_buffer_length != -1):
+                image_bytes += byte_buffer
+            else:
+                break
+            read_bytes += byte_buffer_length
 
+        rgb_image = Image.frombytes("RGB", (width, height), image_bytes)  # check if  PIL is needed
+        # TODO: Remove after Debug
+        # rgb_image.save(os.path.join('./', 'test'), format='png')
+
+        print('Received screenshot')
+
+        img = np.array(rgb_image)
+        # Convert RGB to BGR
+        rgb_image = img[:, :, ::-1].copy()
+        # cv2.imwrite('image.png',img)
+        return img
+	
     def read_ground_truth_from_stream(self):
         """Read Ground Truth fro sever_socket"""
         msg_length = self._read_from_buff("I")[0]
@@ -225,6 +246,7 @@ class AgentClient:
                 self.playing_mode
             )
         self._send_command(RequestCodes.GetAllLevelScores)
+        
         return self._read_from_buff("" + n_levels * "I")
 
     def get_current_score(self):

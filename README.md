@@ -29,6 +29,7 @@ Java Environment can be downloaded  from [this link](http://www.oracle.com/techn
 - numpy
 - shapely
 - open cv
+- tensorflow
 - install the dependencies
 
 <code>pip3 install -r requirements.txt</code>
@@ -47,7 +48,7 @@ Pre-compiled Science Birds for different platforms are in folder:
 
 2. Run the Science Birds game executable file to start a game instance
 	- The Science Birds game used in this framework is a modified version of Lucas N. Ferreira's work that can be found in his [Github repository](https://github.com/lucasnfe/science-birds)
-3. Run the Python agent 
+3. Run the Python naive agent 
 
 <code>python3 main.py</code>
 
@@ -55,7 +56,13 @@ Pre-compiled Science Birds for different platforms are in folder:
 
 <code>python3 setup.py install</code>
 
-4. The agent should be able to play the game automatically now
+4. Run the Python deep Q-learning agent 
+
+<code>python3 main.py -dq</code>
+
+5. Eagle Wings
+    - The eagle wings agent is located in the [science birds repository](https://gitlab.com/aibirds/sciencebirds)
+    - A readme file on running the agent is included in the agent's zip file
 
 ## Generate Levels<a name="Level"></a>
 1. Game levels are stored in the folder:
