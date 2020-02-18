@@ -56,11 +56,11 @@ class ClientNaiveAgent(Thread):
 			level = len(self.solved)
 		return level
 
-	def check_my_score(self, n_levels):
+	def check_my_score(self):
 		"""
 		 * Run the Client (Naive Agent)
 		*"""
-		scores = self.ar.get_all_level_scores(n_levels)
+		scores = self.ar.get_all_level_scores()
 		#print(" My score: ")
 		level = 1
 		for i in scores:
@@ -96,7 +96,7 @@ class ClientNaiveAgent(Thread):
 
 		#load the initial level (default 1)
 		#Check my score
-		self.check_my_score(n_levels)
+		self.check_my_score()
 
 		self.current_level = self.get_next_level()
 		self.ar.load_level(self.current_level)
@@ -119,7 +119,7 @@ class ClientNaiveAgent(Thread):
 				n_levels = self.update_no_of_levels()
 
 				#/System.out.println(" loading the level " + (self.current_level + 1) )
-				self.check_my_score(n_levels)
+				self.check_my_score()
 				self.current_level = self.get_next_level()
 				self.ar.load_level(self.current_level)
 
@@ -131,7 +131,7 @@ class ClientNaiveAgent(Thread):
 				#check for change of number of levels in the game
 				n_levels = self.update_no_of_levels()
 
-				self.check_my_score(n_levels)
+				self.check_my_score()
 
 				#If lost, then restart the level
 				self.failed_counter += 1

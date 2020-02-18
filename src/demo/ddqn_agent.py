@@ -106,11 +106,11 @@ class ClientRLAgent(Thread):
             level = len(self.solved)
         return level
 
-    def check_my_score(self, n_levels):
+    def check_my_score(self):
         """
          * Run the Client (Naive Agent)
         *"""
-        scores = self.ar.get_all_level_scores(n_levels)
+        scores = self.ar.get_all_level_scores()
         print(" My score: ")
         level = 1
         for i in scores:
@@ -167,7 +167,7 @@ class ClientRLAgent(Thread):
                             s = state_maker.make(sess, s)
                             n_levels = self.update_no_of_levels()
                             print("number of levels " , n_levels)
-                            self.check_my_score(n_levels)
+                            self.check_my_score()
                             self.current_level = self.get_next_level()
                             self.ar.load_level(self.current_level)
 
@@ -184,7 +184,7 @@ class ClientRLAgent(Thread):
                             # check for change of number of levels in the game
                             n_levels = self.update_no_of_levels()
                             print("number of levels " , n_levels)
-                            self.check_my_score(n_levels)
+                            self.check_my_score()
                             # If lost, then restart the level
                             self.failed_counter += 1
                             if self.failed_counter > 0:  # for testing , go directly to the next level

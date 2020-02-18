@@ -290,8 +290,8 @@ The ./src folder contains all the source code of the python naive agent. The age
 			<td>23</td>
 			<td>Get my score</td>
 			<td>[23]</td>
-			<td>A ([number_of_levels] * 4) bytes array with every four<br/> slots indicates a best score for the corresponding level</td>
-			<td>[score_level_1]....[score_level_n]<br/>
+			<td>A 4 bytes array indicating the number of levels <br/> followed by ([number_of_levels] * 4) bytes array with every four<br/> slots indicates a best score for the corresponding level</td>
+			<td>[number_of_levels][score_level_1]....[score_level_n]<br/>
 			Note: This should be used carefully for the training mode, <br/>
 			becaues there may be large amount of levels used in the training.<br/>
 			Instead, when the agent is in winning state,<br/>

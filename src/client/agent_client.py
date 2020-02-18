@@ -193,7 +193,7 @@ class AgentClient:
         rgb_image = img[:, :, ::-1].copy()
         # cv2.imwrite('image.png',img)
         return img
-	
+
     def read_ground_truth_from_stream(self):
         """Read Ground Truth fro sever_socket"""
         msg_length = self._read_from_buff("I")[0]
@@ -239,14 +239,14 @@ class AgentClient:
         self._send_command(code, "iiiiii", fx, fy, dx, dy, t1, t2)
         return self._read_from_buff("B")[0]
 
-    def get_all_level_scores(self,n_levels):
+    def get_all_level_scores(self):
         if self.playing_mode != PlayingMode.COMPETITION:
             self._logger.warning(
                 "GetAllLevelScores is not recommended in %s",
                 self.playing_mode
             )
         self._send_command(RequestCodes.GetAllLevelScores)
-        
+        n_levels = self._read_from_buff("I")[0]
         return self._read_from_buff("" + n_levels * "I")
 
     def get_current_score(self):
