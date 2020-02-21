@@ -7,8 +7,9 @@ import json
 import logging
 import numpy as np
 from PIL import Image
+import sys
 
-
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 class GameState(Enum):
     """The state of the game at a particular instant"""
     UNKNOWN = 0
@@ -196,8 +197,11 @@ class AgentClient:
 
     def read_ground_truth_from_stream(self):
         """Read Ground Truth fro sever_socket"""
+        self._logger.info("reading groundtruth from stream")
         msg_length = self._read_from_buff("I")[0]
         data = b''
+
+        self._logger.info("groundtruth length is %d bytes", msg_length)
         while len(data) < msg_length:
             packet = self.server_socket.recv(msg_length - len(data))
             if not packet:
@@ -273,22 +277,26 @@ class AgentClient:
         return self._read_from_buff("B")[0]
 
     def get_ground_truth_with_screenshot(self):
+        self._logger.info("sending get_ground_truth_with_screenshot request")
         self._send_command(RequestCodes.GetGroundTruthWithScreenshot)
         gt = self.read_ground_truth_from_stream()
         im = self.read_image_from_stream()
         return (im, gt)
 
     def get_ground_truth_without_screenshot(self):
+        self._logger.info("sending get_ground_truth_without_screenshot request")
         self._send_command(RequestCodes.GetGroundTruthWithoutScreenshot)
         return self.read_ground_truth_from_stream()
 
     def get_noisy_ground_truth_with_screenshot(self):
+        self._logger.info("sending get_noisy_ground_truth_with_screenshot request")
         self._send_command(RequestCodes.GetNoisyGroundTruthWithScreenshot)
         gt = self.read_ground_truth_from_stream()
         im = self.read_image_from_stream()
         return (im, gt)
 
     def get_noisy_ground_truth_without_screenshot(self):
+        self._logger.info("sending get_noisy_ground_truth_without_screenshot request")
         self._send_command(RequestCodes.GetNoisyGroundTruthWithoutScreenshot)
         return self.read_ground_truth_from_stream()
 

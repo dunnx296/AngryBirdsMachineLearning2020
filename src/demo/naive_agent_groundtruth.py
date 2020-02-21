@@ -8,7 +8,7 @@ import random
 import json
 import socket
 from math import cos, sin, degrees, pi
-from client.agent_client import AgentClient, GameState
+from client.agent_client import AgentClient, GameState, RequestCodes
 from trajectory_planner.trajectory_planner import SimpleTrajectoryPlanner
 from computer_vision.GroundTruthReader import GroundTruthReader,NotVaildStateError
 from computer_vision.game_object import GameObjectType
@@ -23,8 +23,22 @@ class ClientNaiveAgent(Thread):
 			sc_json_config = json.load(config)
 
 		self.ar = AgentClient(**sc_json_config[0])
+
+		with open('./src/client/server_observer_client_config.json', 'r') as observer_config:
+			observer_sc_json_config = json.load(observer_config)
+
+
+		#the observer agent can only execute 6 command: configure, screenshot
+		#and the four groundtruth related ones
+		self.observer_ar = AgentClient(**observer_sc_json_config[0])
+
 		try:
 			self.ar.connect_to_server()
+		except socket.error as e:
+			print("Error in client-server communication: " + str(e))
+
+		try:
+			self.observer_ar.connect_to_server()
 		except socket.error as e:
 			print("Error in client-server communication: " + str(e))
 
@@ -35,6 +49,36 @@ class ClientNaiveAgent(Thread):
 		self.id = 28888
 		self.first_shot = True
 		self.prev_target = None
+
+	def sample_state(self, request = RequestCodes.GetNoisyGroundTruthWithScreenshot, frequency = 0.5):
+		"""
+		 sample a state from the observer agent
+		 this method allows to be run in a different thread
+		 NOTE: Setting the frequency too high, i.e. <0.01 may cause lag in science birds game
+		       due to the calculation of the groundtruth
+		"""
+		while (True):
+			vision = None
+			if request == RequestCodes.GetGroundTruthWithScreenshot:
+				image, ground_truth = self.observer_ar.get_ground_truth_with_screenshot()
+				#set to true to ignore invalid state and return the vision object regardless
+				# of #birds and #pigs
+				vision = GroundTruthReader(ground_truth,True)
+				vision.set_screenshot(image)
+
+			elif request == RequestCodes.GetGroundTruthWithoutScreenshot:
+				ground_truth = self.observer_ar.get_ground_truth_without_screenshot()
+				vision = GroundTruthReader(ground_truth,True)
+
+			elif request == RequestCodes.GetNoisyGroundTruthWithScreenshot:
+				image, ground_truth = self.observer_ar.get_noisy_ground_truth_with_screenshot()
+				vision = GroundTruthReader(ground_truth,True)
+				vision.set_screenshot(image)
+
+			elif request == RequestCodes.GetNoisyGroundTruthWithoutScreenshot:
+				ground_truth = self.observer_ar.get_noisy_ground_truth_without_screenshot()
+				vision = GroundTruthReader(ground_truth,True)
+			time.sleep(frequency)
 
 	def get_next_level(self):
 		level = 0
@@ -89,6 +133,7 @@ class ClientNaiveAgent(Thread):
 	def run(self):
 		sim_speed = 50
 		self.ar.configure(self.id)
+		self.observer_ar.configure(self.id)
 		self.ar.set_game_simulation_speed(sim_speed)
 		n_levels = self.update_no_of_levels()
 
@@ -101,6 +146,17 @@ class ClientNaiveAgent(Thread):
 		self.current_level = self.get_next_level()
 		self.ar.load_level(self.current_level)
 
+
+		'''
+		Uncomment this section to run TEST for requesting groudtruth via different thread
+		'''
+		#gt_thread = Thread(target=self.sample_state)
+		#gt_thread.start()
+		'''
+		END TEST
+		'''
+
+
 		#ar.load_level((byte)9)
 		while True:
 
@@ -108,6 +164,8 @@ class ClientNaiveAgent(Thread):
 			#sim_speed = random.randint(1, 50)
 			#self.ar.set_game_simulation_speed(sim_speed)
 			#print(‘simulation speed set to ', sim_speed)
+
+			#test for multi-thread groundtruth reading
 
 			print('solving level: {}'.format(self.current_level))
 			state = self.solve()
@@ -160,7 +218,6 @@ class ClientNaiveAgent(Thread):
 				print("unexpected episode menu page, reload the level: "\
 				, self.current_level)
 				self.ar.load_level(self.current_level)
-
 
 	def _updateReader(self,dtype):
 		'''
