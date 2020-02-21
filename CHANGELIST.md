@@ -1,3 +1,10 @@
+### List of Changes (release alpha v0.1.2)
+21th Feb 2020
+
+1. The agent now can register an observer agent on port 2006 which allows the user to request the screenshots/groundtruth from another thread.
+    - the demo code of using this function is in src/demo/naive_agent_groundtruth.py line 53-81 and 153-154
+
+
 ### List of Changes (release alpha v0.1.1) 
 19th Feb 2020 
 
