@@ -2,6 +2,7 @@
 21th Feb 2020
 
 1. The agent now can register an observer agent on port 2006 which allows the user to request the screenshots/groundtruth from another thread.
+    - the observer agent can only execute 6 commands: configure (1), DoScreenshot (11) and the four groundtruth related (61-64)
     - the demo code of using this function is in src/demo/naive_agent_groundtruth.py line 53-81 and 153-154
 
 
