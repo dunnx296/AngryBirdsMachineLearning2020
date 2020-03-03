@@ -1,3 +1,17 @@
+### List of Changes (release alpha v0.2.0)
+28th Feb 2020
+
+1. Added capability of reading novlety level 1-3 with 1200 sample levels
+    -  Level 1: new objects with 5 novelty type samples provided (100 levels for each)
+    -  Level 2: change of parameters of objects with 5 novelty type samples provided (100 levels for each)
+    -  Level 3: change of representation with 2 novelty type samples provided (100 levels for each)
+    - The original non-onvelty levels are also provided for comparasion
+    - Note: the source code of the novelty generator is not included in the release 
+2. Fixed cshoot return shoot successfully indicator before the level is stable problem. 
+    - now the return value for cshoot/pshoot will be returned once the not objects in level is moving
+    -  now the return value for cfastshoot/pfastshoot will be returned after the shoot procedure is finished, i.e., the drag and tap operations are executed 
+3. Fixed science birds error message display bug 
+
 ### List of Changes (release alpha v0.1.2)
 21th Feb 2020
 
@@ -15,6 +29,7 @@
 2. Naive agent and DQ agent are adapted
 
 ### List of Changes (release alpha v0.1) 
+
 10th Feb 2020 
 
 This is a brief introduction of what has been changed in this version. Please refer to the [README](https://gitlab.com/sail-on-anu/sciencebirdsframework_release/-/blob/release/alpha-0.1/README.md) file for details.
@@ -40,5 +55,3 @@ This is a brief introduction of what has been changed in this version. Please re
 
 5. Score changing problem after WON/LOST banner shown up is solved
 6. Protocol code 13 (get best score) has been removed as it performs the same as 23 (get my score) given only one agent will play the game.
-
-

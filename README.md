@@ -8,10 +8,11 @@
 	3. [The Science Birds Game](#SB)
 2. [Run the Agent](#Run)
 3. [Level Generation](#Level)
-4. [Outline of the Provided Files](#Files)
-5. [Outline of the Agent Code](#Code)
-6. [Ground Truth Data Structure](#Groundtruth)
-7. [Agent-Game Communication Protocols](#Protocol)
+4. [Novel Levels Loading](#Novel)
+5. [Outline of the Provided Files](#Files)
+6. [Outline of the Agent Code](#Code)
+7. [Ground Truth Data Structure](#Groundtruth)
+8. [Agent-Game Communication Protocols](#Protocol)
 
 ## Requirements<a name="Requirements"></a>
 This system has been tested on
@@ -87,6 +88,16 @@ in folder levelgenerator
 
 4. A brief description about the level generator is [here](#generate)
 5. A detailed description of the level generator is [here](levelgenerator/README.md)
+
+## Novel Levels Loading<a name="Novel"></a>
+In science birds game:
+1. Each set of novel level placed in a seperate folder containing two subfolders:  [asset bundle] and [levels]
+2. To load the levels: 
+    - Place the asset bundle folder to the
+"Assets\StreamingAssets\AssetBundle\" folder
+    - Place the corresponding levels to the
+"Assets\StreamingAssets\Levels\" folder
+
 
 ## Outline of the Provided Files <a name="Files"></a>
 This framework provided the following components:
