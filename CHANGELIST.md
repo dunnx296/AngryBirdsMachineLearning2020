@@ -6,7 +6,8 @@
     -  Level 2: change of parameters of objects with 5 novelty type samples provided (100 levels for each)
     -  Level 3: change of representation with 2 novelty type samples provided (100 levels for each)
     - The original non-onvelty levels are also provided for comparasion
-    - Note: the source code of the novelty generator is not included in the release 
+    - Note: the source code of the novelty generator is not included in the release
+    - The instruction of loading novelty levels is in the Novel Levels Loading section of README.md 
 2. Fixed cshoot return shoot successfully indicator before the level is stable problem. 
     - now the return value for cshoot/pshoot will be returned once the not objects in level is moving
     -  now the return value for cfastshoot/pfastshoot will be returned after the shoot procedure is finished, i.e., the drag and tap operations are executed 
