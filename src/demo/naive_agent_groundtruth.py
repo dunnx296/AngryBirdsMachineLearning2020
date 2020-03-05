@@ -102,30 +102,26 @@ class ClientNaiveAgent(Thread):
 		"""
 		while (True):
 			vision = None
+			if request == RequestCodes.GetGroundTruthWithScreenshot:
+				image, ground_truth = self.observer_ar.get_ground_truth_with_screenshot()
+				#set to true to ignore invalid state and return the vision object regardless
+				# of #birds and #pigs
+				vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
+				vision.set_screenshot(image)
 
-			try:
-				if request == RequestCodes.GetGroundTruthWithScreenshot:
-					image, ground_truth = self.observer_ar.get_ground_truth_with_screenshot()
-					#set to true to ignore invalid state and return the vision object regardless
-					# of #birds and #pigs
-					vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
-					vision.set_screenshot(image)
+			elif request == RequestCodes.GetGroundTruthWithoutScreenshot:
+				ground_truth = self.observer_ar.get_ground_truth_without_screenshot()
+				vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
 
-				elif request == RequestCodes.GetGroundTruthWithoutScreenshot:
-					ground_truth = self.observer_ar.get_ground_truth_without_screenshot()
-					vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
+			elif request == RequestCodes.GetNoisyGroundTruthWithScreenshot:
+				image, ground_truth = self.observer_ar.get_noisy_ground_truth_with_screenshot()
+				vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
+				vision.set_screenshot(image)
 
-				elif request == RequestCodes.GetNoisyGroundTruthWithScreenshot:
-					image, ground_truth = self.observer_ar.get_noisy_ground_truth_with_screenshot()
-					vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
-					vision.set_screenshot(image)
-
-				elif request == RequestCodes.GetNoisyGroundTruthWithoutScreenshot:
-					ground_truth = self.observer_ar.get_noisy_ground_truth_without_screenshot()
-					vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
-				time.sleep(frequency)
-			except NotVaildStateError:
-				self._logger.debug("no pig or bird found")
+			elif request == RequestCodes.GetNoisyGroundTruthWithoutScreenshot:
+				ground_truth = self.observer_ar.get_noisy_ground_truth_without_screenshot()
+				vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
+			time.sleep(frequency)
 
 
 	def get_next_level(self):
@@ -276,71 +272,29 @@ class ClientNaiveAgent(Thread):
 
 		self.showGroundTruth = False
 
-		try:
-			if dtype == 'groundTruth_screenshot':
-				image, ground_truth = self.ar.get_ground_truth_with_screenshot()
-				vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
-				vision.set_screenshot(image)
-				self.showGroundTruth = True # draw the ground truth with screenshot or not
 
-			elif dtype == 'groundTruth':
-				ground_truth = self.ar.get_ground_truth_without_screenshot()
+		if dtype == 'groundTruth_screenshot':
+			image, ground_truth = self.ar.get_ground_truth_with_screenshot()
+			vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
+			vision.set_screenshot(image)
+			self.showGroundTruth = True # draw the ground truth with screenshot or not
 
-				vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
+		elif dtype == 'groundTruth':
+			ground_truth = self.ar.get_ground_truth_without_screenshot()
 
-			elif dtype == 'NoisygroundTruth_screenshot':
-				image, ground_truth = self.ar.get_noisy_ground_truth_with_screenshot()
-				vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
-				vision.set_screenshot(image)
-				self.showGroundTruth = True # draw the ground truth with screenshot or not
+			vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
 
-			elif dtype == 'NoisygroundTruth':
-				ground_truth = self.ar.get_noisy_ground_truth_without_screenshot()
-				vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
+		elif dtype == 'NoisygroundTruth_screenshot':
+			image, ground_truth = self.ar.get_noisy_ground_truth_with_screenshot()
+			vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
+			vision.set_screenshot(image)
+			self.showGroundTruth = True # draw the ground truth with screenshot or not
 
-			return vision
+		elif dtype == 'NoisygroundTruth':
+			ground_truth = self.ar.get_noisy_ground_truth_without_screenshot()
+			vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
 
-
-		except NotVaildStateError:
-
-			# try zoomout first and then test again
-			self.ar.fully_zoom_out()
-			try:
-				if dtype == 'groundTruth_screenshot':
-					image, ground_truth = self.ar.get_ground_truth_with_screenshot()
-					vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
-					vision.set_screenshot(image)
-					self.showGroundTruth = True # draw the ground truth with screenshot or not
-
-				elif dtype == 'groundTruth':
-					ground_truth = self.ar.get_ground_truth_without_screenshot()
-
-					vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
-
-
-				elif dtype == 'NoisygroundTruth_screenshot':
-					image, ground_truth = self.ar.get_noisy_ground_truth_with_screenshot()
-					vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
-					vision.set_screenshot(image)
-					self.showGroundTruth = True # draw the ground truth with screenshot or not
-
-				elif dtype == 'NoisygroundTruth':
-					ground_truth = self.ar.get_noisy_ground_truth_without_screenshot()
-					vision = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
-
-				return vision
-
-			except NotVaildStateError: # if still can not find a vaild state, the game must be ended.
-
-				#expect the game is ended, requesting game state again
-				while True:
-					print('{} : state is not vaild, try request game state again...'.format(datetime.fromtimestamp(time.time())))
-					time.sleep(0.002)
-					state = self.ar.get_game_state()
-					if state != GameState.PLAYING:
-						return state
-
-
+		return vision
 
 	def solve(self):
 		"""
@@ -351,10 +305,8 @@ class ClientNaiveAgent(Thread):
 		ground_truth_type = 'groundTruth'
 
 		vision = self._updateReader(ground_truth_type)
-
-
-		if isinstance(vision,GameState):
-			return vision
+		if not vision.is_vaild():
+			return self.ar.get_game_state()
 
 		if self.showGroundTruth:
 			vision.showResult()

@@ -39,7 +39,7 @@ from PIL import ImageFile
 from threading import Thread
 from client.agent_client import AgentClient, GameState
 from trajectory_planner.trajectory_planner import SimpleTrajectoryPlanner
-from computer_vision.GroundTruthReader import GroundTruthReader
+from computer_vision.GroundTruthReader import GroundTruthReader,NotVaildStateError
 import time
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -63,6 +63,44 @@ class StateMaker():
 
 class ClientRLAgent(Thread):
     def __init__(self):
+                #initialise colormap for the ground truth reader
+        f = open('./ColorMap.json','r')
+        result = json.load(f)
+
+        self.look_up_matrix = np.zeros((len(result),256))
+        self.look_up_obj_type = np.zeros(len(result)).astype(str)
+
+        obj_number = 0
+        for d in result:
+
+            if 'effects_21' in d['type']:
+                obj_name = 'Platform'
+
+            elif 'effects_34' in d['type']:
+                obj_name = 'TNT'
+
+            elif 'ice' in d['type']:
+                obj_name = 'Ice'
+
+            elif 'wood' in d['type']:
+                obj_name = 'Wood'
+
+            elif 'stone' in d['type']:
+                obj_name = 'Stone'
+
+            else:
+                obj_name = d['type'][:-2]
+
+            obj_color_map = d['colormap']
+
+            self.look_up_obj_type[obj_number] = obj_name
+            for pair in obj_color_map:
+                self.look_up_matrix[obj_number][int(pair['x'])] = pair['y']
+
+            obj_number+=1
+
+        #normalise the look_up_matrix
+        self.look_up_matrix = self.look_up_matrix / np.sqrt((self.look_up_matrix**2).sum(1)).reshape(-1,1)
         # Wrapper of the communicating messages
         with open('./src/client/server_client_config.json', 'r') as config:
             sc_json_config = json.load(config)
@@ -82,7 +120,7 @@ class ClientRLAgent(Thread):
 
     def get_slingshot_center(self):
         ground_truth = self.ar.get_ground_truth_without_screenshot()
-        ground_truth_reader = GroundTruthReader(ground_truth)
+        ground_truth_reader = GroundTruthReader(ground_truth,self.look_up_matrix,self.look_up_obj_type)
         sling = ground_truth_reader.find_slingshot_mbr()[0]
         sling.width, sling.height = sling.height, sling.width
         self.sling_center = self.tp.get_reference_point(sling)
