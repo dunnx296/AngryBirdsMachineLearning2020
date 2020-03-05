@@ -1,3 +1,10 @@
+### List of Changes (release alpha v0.2.1)
+5th Mar 2020
+
+1. Modified the method of loading novelty levels.
+    - now novelty levels with different novlety levels/types can be loaded at the same time
+    - the combination of the level sets can be flexibly rearranged  
+
 ### List of Changes (release alpha v0.2.0)
 28th Feb 2020
 

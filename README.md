@@ -90,14 +90,11 @@ in folder levelgenerator
 5. A detailed description of the level generator is [here](levelgenerator/README.md)
 
 ## Novel Levels Loading<a name="Novel"></a>
-In science birds game:
-1. Each set of novel level placed in a seperate folder containing two subfolders:  [asset bundle] and [levels]
-2. To load the levels: 
-    - Place the asset bundle folder to the
-"Assets\StreamingAssets\AssetBundle\" folder
-    - Place the corresponding levels to the
-"Assets\StreamingAssets\Levels\" folder
-
+1. In science birds game Levels folder as shwon in the previous [section](#Level), there will be a set of folders named novelty_level_*
+2. In each of these folders, there will be a set of folders named type*
+3. Each set of novel levels are placed in one type* folder which contain two subfolders:  [asset bundle] and [levels]
+4. By default, there are 2600 levels pre-installed, where the first 200 levels are non-novelty levels used for generating the novelty levels
+5. To change to levels installed: simply add/remove the type* folders. This operation can be done at the run time of the game
 
 ## Outline of the Provided Files <a name="Files"></a>
 This framework provided the following components:

@@ -7,5 +7,6 @@
 /DB/
 *.txt
 *.DS_Store
+serverbackup
 !requirements.txt
 !levelgenerator/parameters.txt
