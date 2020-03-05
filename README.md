@@ -1,5 +1,5 @@
 # Science Birds Basic Game Playing Software
-#### <p style="text-align: center;"> Alpha v 0.1.2 </p>
+#### <p style="text-align: center;"> Alpha v 0.2.1 </p>
 
 ## Table of contents
 1. [Requirements](#Requirements)
