@@ -114,3 +114,7 @@ The parameters for generating test trials are in <code>configMeta.xml</code>
  3. A minimal demo on handling such states are in
        - demo/naive_agent_groundtruth.py 
        - client/agent_client.py
+
+#### Data recording
+1. The recorded data can be found in the root folder of the science birds game, with the name <code>Evaluation_[timestamp]</code>
+2. The csv files with data recorded can be found in this folder
