@@ -1,3 +1,8 @@
+### List of Changes (release alpha v0.3.0)
+7th Apr 2020
+1. Add test harness which generates test trials and send specific requests to the agent to perform the test trial
+2. Add 6 new states and 3 requests related to test harness 
+
 ### List of Changes (release alpha v0.2.1)
 5th Mar 2020
 

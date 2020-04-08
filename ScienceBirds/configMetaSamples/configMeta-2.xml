@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-16"?>
+<config_generation>
+
+  <novelty_detection_measurement step='50' measure_in_training='true' measure_in_testing='true'/>
+
+  <trial>
+    <!--generate [count] trials with this configuration-->	
+    <count>1</count>
+    <!--run exactly the same single trial [repeats] times-->
+    <repeats>1</repeats>
+
+    <!--the time (seconds) limit and interaction limit that will triger a test-->
+    <checkpoint>
+      <limit type='time'>200</limit>
+      <limit type='interaction'>200</limit>
+    </checkpoint>
+
+    <training>
+      <!--all training sets will be combined to one set after reading -->
+      <!--the limits specified here are overall limits for the combined set-->
+      <limits>
+        <limit type='time'>6000</limit>
+        <limit type='interaction'>6000</limit>
+        <limit type='attempt_per_level'>5</limit>
+        <limit type='allow_level_selection'>false</limit>
+      </limits>
+      <game_level_sets>
+        <game_level_set novelty_level='1' novelty_type='1' amount='100'/>
+      </game_level_sets>  	
+
+    </training>
+
+    <test ordered='true'>
+      <game_level_sets>  	
+        <game_level_set novelty_level='0' novelty_type='1' amount='10' time='100' interaction='50' attempt_per_level='2' allow_level_selection='false'/>
+        <game_level_set novelty_level='1' novelty_type='1' amount='10' time='100' interaction='50' attempt_per_level='2' allow_level_selection='false'/>
+      </game_level_sets>      
+    </test>
+
+  </trial>
+</config_generation>

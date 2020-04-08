@@ -1,5 +1,5 @@
 # Science Birds Basic Game Playing Software
-#### <p style="text-align: center;"> Alpha v 0.2.1 </p>
+#### <p style="text-align: center;"> Alpha v 0.3.0 </p>
 
 ## Table of contents
 1. [Requirements](#Requirements)
@@ -53,13 +53,9 @@ Pre-compiled Science Birds for different platforms are in folder:
 
 <code>python3 main.py</code>
 
-	- if there is any import issues, run the setup file first:
-
-<code>python3 setup.py install</code>
-
 4. Run the Python deep Q-learning agent 
-
-<code>python3 main.py -dq</code>
+    - The dq agent is placed in ./src/demo/ddqn_test_harness_agent.py
+    - To run it: <code>python3 ddqn_test_harness_agent.py</code>
 
 5. Eagle Wings
     - The eagle wings agent is located in the [science birds repository](https://gitlab.com/aibirds/sciencebirds)
@@ -95,6 +91,7 @@ in folder levelgenerator
 3. Each set of novel levels are placed in one type* folder which contain two subfolders:  [asset bundle] and [levels]
 4. By default, there are 2600 levels pre-installed, where the first 200 levels are non-novelty levels used for generating the novelty levels
 5. To change to levels installed: simply add/remove the type* folders. This operation can be done at the run time of the game
+
 
 ## Outline of the Provided Files <a name="Files"></a>
 This framework provided the following components:
@@ -408,6 +405,14 @@ The ./src folder contains all the source code of the python naive agent. The age
 			<td>[1]/[0]</td>
 		</tr>
 		<tr>
+			<td>53</td>
+			<td>Load next available level</td>
+			<td>[53]</td>
+			<td>Loaded Level Index</td>
+			<td>[level index]<br/>
+			level index: 4 bytes</td>
+		</tr>
+		<tr>
 			<td>61-70</td>
 			<td colspan=4>Science Birds Specific Messages</td>		
 		</tr>
@@ -451,6 +456,36 @@ The ./src folder contains all the source code of the python naive agent. The age
 			To get the winning score, please make sure to execute this command when the game state is "WON"</td>
 			<td>[score]<br/>
 			score: 4 bytes</td>
+		</tr>
+		<tr>
+			<td>66</td>
+			<td>Report Novelty Likelihood</td>
+			<td>[66][novelty_likelihood][non_novelty_likelihood]<br/>
+			The length of each parameter is 4 bytes</td>
+			<td>OK/ERR</td/>
+			<td>[1][0]</td>
+		</tr>
+		<tr>
+			<td>67</td>
+			<td>Report Novelty Description</td>
+			<td>[67][msg_length][novelty_description]<br/>
+			msg_length:4 bytes int<br/>
+			novelty_description:[msg_length] bytes string</td>
+			<td>OK/ERR</td/>
+			<td>[1][0]</td>
+		</tr>
+		<tr>
+			<td>68</td>
+			<td>Ready for New Set</td>
+			<td>[68]</td>
+			<td>a 18 bytes array indicating the time limit, interaction limit, number of levels, if in training or testing mode and if levels are sequenced or as a set</td/>
+			<td>[time_limit]:4 bbytes integer<br/>
+			[interaction_limit] 4 byte integer<br/>
+			[#levels] 4 bytes integer<br/>
+			[attempts_per_level]4 bytes integer<br/>
+			[mode] 1 byte, 0 -> training, 1 -> testing <br/>
+			[if_as_a_set]:1 byte, 0 -> set, 1 -> sequence 
+			</td>
 		</tr>
 		<tr>
 			<td colspan=5>* Safe Mode: The server will wait until the state is static after making a shot.</td>

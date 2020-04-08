@@ -45,7 +45,8 @@ class ClientNaiveAgent(Thread):
 		except socket.error as e:
 			print("Error in client-server communication: " + str(e))
 
-		self.current_level = -1
+		self.current_level = 0
+		self.training_level_backup = 0;
 		self.failed_counter = 0
 		self.solved = []
 		self.tp = SimpleTrajectoryPlanner()
@@ -124,7 +125,7 @@ class ClientNaiveAgent(Thread):
 			time.sleep(frequency)
 
 
-	def get_next_level(self):
+	def get_next_unsolved_level(self):
 		level = 0
 		unsolved = False
 		#all the level have been solved, then get the first unsolved level
@@ -143,6 +144,15 @@ class ClientNaiveAgent(Thread):
 		if level == 0:
 			level = len(self.solved)
 		return level
+
+	def get_next_level(self):
+		level = self.current_level + 1
+		n_levels = self.update_no_of_levels()
+		level = level%n_levels
+		if level <= 0:
+			level = 1
+		return level
+
 
 	def check_my_score(self):
 		"""
@@ -175,7 +185,7 @@ class ClientNaiveAgent(Thread):
 		return n_levels
 
 	def run(self):
-		sim_speed = 1
+		sim_speed = 50
 		self.ar.configure(self.id)
 		self.observer_ar.configure(self.id)
 		self.ar.set_game_simulation_speed(sim_speed)
@@ -188,18 +198,20 @@ class ClientNaiveAgent(Thread):
 		self.check_my_score()
 
 		self.current_level = self.get_next_level()
-		self.ar.load_level(self.current_level)
+		self.ar.load_next_available_level()
 
 
 		'''
 		Uncomment this section to run TEST for requesting groudtruth via different thread
 		'''
-		gt_thread = Thread(target=self.sample_state)
-		gt_thread.start()
+		#gt_thread = Thread(target=self.sample_state)
+		#gt_thread.start()
 		'''
 		END TEST
 		'''
 
+		#indicates if the previous game level set is a training set
+		change_from_training = False
 
 		#ar.load_level((byte)9)
 		while True:
@@ -210,7 +222,6 @@ class ClientNaiveAgent(Thread):
 
 			#test for multi-thread groundtruth reading
 
-			print('solving level: {}'.format(self.current_level))
 			state = self.solve()
 
 			#If the level is solved , go to the next level
@@ -222,7 +233,7 @@ class ClientNaiveAgent(Thread):
 				#/System.out.println(" loading the level " + (self.current_level + 1) )
 				self.check_my_score()
 				self.current_level = self.get_next_level()
-				self.ar.load_level(self.current_level)
+				self.ar.load_next_available_level()
 
 				# make a new trajectory planner whenever a new level is entered
 				self.tp = SimpleTrajectoryPlanner()
@@ -240,7 +251,7 @@ class ClientNaiveAgent(Thread):
 
 					self.failed_counter = 0
 					self.current_level = self.get_next_level()
-					self.ar.load_level(self.current_level)
+					self.ar.load_next_available_level()
 
 					#ar.load_level((byte)9)
 				else:
@@ -250,17 +261,55 @@ class ClientNaiveAgent(Thread):
 			elif state == GameState.LEVEL_SELECTION:
 				print("unexpected level selection page, go to the last current level : " \
 				, self.current_level)
-				self.ar.load_level(self.current_level)
+				self.ar.load_next_available_level()
 
 			elif state == GameState.MAIN_MENU:
 				print("unexpected main menu page, reload the level : " \
 				, self.current_level)
-				self.ar.load_level(self.current_level)
+				self.ar.load_next_available_level()
 
 			elif state == GameState.EPISODE_MENU:
 				print("unexpected episode menu page, reload the level: "\
 				, self.current_level)
-				self.ar.load_level(self.current_level)
+				self.ar.load_next_available_level()
+			elif state == GameState.REQUESTNOVELTYLIKELIHOOD:
+				#Require report novelty likelihood and then playing can be resumed
+				#dummy likelihoods:
+				novelty_likelihood=0.9
+				non_novelty_likelihood=0.1
+				self.ar.report_novelty_likelihood(novelty_likelihood,non_novelty_likelihood)
+			elif state == GameState.NEWTRIAL:
+				#Make a fresh agent to continue with a new trial (evaluation)
+				(time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set) = self.ar.ready_for_new_set()
+				self.current_level = 0
+				self.training_level_backup = 0
+
+			elif state == GameState.NEWTESTSET:
+				#DO something to clone a test-only agent that does not learn
+				(time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set) = self.ar.ready_for_new_set()
+
+				if change_from_training:
+					self.training_level_backup = self.current_level
+				self.current_level = 0
+				change_from_training = False
+
+			elif state == GameState.NEWTRAININGSET:
+				#DO something to start a fresh agent for a new training set
+				(time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set) = self.ar.ready_for_new_set()
+				self.current_level = 0
+				self.training_level_backup = 0
+				change_from_training = True
+
+			elif state == GameState.RESUMETRAINING:
+				#DO something to resume the training agent to the previous training
+				(time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set) = self.ar.ready_for_new_set()
+				change_from_training = True
+				self.current_level = self.training_level_backup
+
+			elif state == GameState.EVALUATION_TERMINATED:
+				#store info and disconnect the agent as the evaluation is finished
+				print ("Evaluation terminated.")
+				exit(0)
 
 	def _updateReader(self,dtype):
 		'''
@@ -306,6 +355,7 @@ class ClientNaiveAgent(Thread):
 
 		vision = self._updateReader(ground_truth_type)
 		if not vision.is_vaild():
+			self._logger.warning("no pig or birds found")
 			return self.ar.get_game_state()
 
 		if self.showGroundTruth:
