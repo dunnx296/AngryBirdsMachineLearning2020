@@ -63,7 +63,7 @@ class RequestCodes(Enum):
     ReportNoveltyLikelihood = 66
     ReportNoveltyDescription = 67
     ReadyForNewSet = 68
-
+    NoveltyInfo = 69
 
 class AgentClient:
     """Science Birds agent API"""
@@ -169,8 +169,8 @@ class AgentClient:
     def ready_for_new_set(self):
         self._logger.debug("Ready for new data set with appropriate agent.")
         self._send_command(RequestCodes.ReadyForNewSet)
-        (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set) = self._read_from_buff("IIIIBB")
-        return (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set)
+        (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set, allowNoveltyInfo) = self._read_from_buff("IIIIBBB")
+        return (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set, allowNoveltyInfo)
 
     def report_novelty_likelihood(self,report_novelty_likelihood, non_novelty_likelihood):
         self._logger.debug("report novelty likelihood")
@@ -273,6 +273,12 @@ class AgentClient:
         self._logger.debug('Received load next available level')
         return level
 
+    def get_novelty_info(self):
+        """query if novelty starts to appear"""
+        self._send_command(RequestCodes.NoveltyInfo)
+        novelty_info = self._read_from_buff("I")[0]
+        self._logger.info("novelty existence is %d ", novelty_info)
+        return novelty_info
 
     def restart_level(self):
         """Request to restart level"""

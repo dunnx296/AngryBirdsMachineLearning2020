@@ -319,7 +319,7 @@ while True:
     try:
 
         rl_client = ClientRLAgent()
-        
+
         # Properties
         tf.reset_default_graph()
         online_QN = DDQN(OUT_SIZE)
@@ -396,7 +396,7 @@ while True:
                     print("NEWTESTSET")
                     IS_IN_TRAINING_MODE = False
                     (time_limit, interaction_limit, n_levels, attempts_per_level, mode,
-                     seq_or_set) = rl_client.ar.ready_for_new_set()
+                     seq_or_set, allowNoveltyInfo) = rl_client.ar.ready_for_new_set()
                     #rl_client.ar.ready_for_new_set()
                 elif game_state == GameState.NEWTRAININGSET:
                     # DO something to resume the training agent

@@ -275,7 +275,13 @@ The ./src folder contains all the source code of the python naive agent. The age
 			[4]: LOADING<br />
 			[5]: PLAYING<br />
 			[6]: WON<br />
-			[7]: LOST</td>
+			[7]: LOST<br />
+			[8]: NEWTESTSET<br />
+			[9]: NEWTRAININGSET<br />
+			[10]: RESUMETRAINING<br />
+			[11]: NEWTRIAL<br />
+			[12]: REQUESTNOVELTYLIKELIHOOD<br />
+			[13]: EVALUATION_TERMINATED</td>
 		</tr>
 		<tr>
 			<td>14</td>
@@ -478,15 +484,24 @@ The ./src folder contains all the source code of the python naive agent. The age
 			<td>68</td>
 			<td>Ready for New Set</td>
 			<td>[68]</td>
-			<td>a 18 bytes array indicating the time limit, interaction limit, number of levels, if in training or testing mode and if levels are sequenced or as a set</td/>
+			<td>a 19 bytes array indicating the time limit, interaction limit, number of levels, if in training or testing mode and if levels are sequenced or as a set, if the agent is allowed to query novelty information</td/>
 			<td>[time_limit]:4 bbytes integer<br/>
 			[interaction_limit] 4 byte integer<br/>
 			[#levels] 4 bytes integer<br/>
 			[attempts_per_level]4 bytes integer<br/>
 			[mode] 1 byte, 0 -> training, 1 -> testing <br/>
-			[if_as_a_set]:1 byte, 0 -> set, 1 -> sequence 
+			[if_as_a_set]:1 byte, 0 -> set, 1 -> sequence<br/>
+                        [allow_novelty_query]:1 byte, 0 -> not allowed, 1 -> allowed  
 			</td>
 		</tr>
+                <tr>
+                        <td>69</td>
+			<td>Request Novelty Information</td>
+			<td>[69]</td>
+			<td>a 4 bytes interger indicating the novelty information</td/>
+			<td>[novelty_info]:4 bbytes integer, -1 -> unknown, 0 -> novelty has not appeared, 1 -> novelty starts to appear  
+			</td>
+                </tr>
 		<tr>
 			<td colspan=5>* Safe Mode: The server will wait until the state is static after making a shot.</td>
 		</tr>
