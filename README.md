@@ -484,7 +484,7 @@ The ./src folder contains all the source code of the python naive agent. The age
 			<td>68</td>
 			<td>Ready for New Set</td>
 			<td>[68]</td>
-			<td>a 19 bytes array indicating the time limit, interaction limit, number of levels, if in training or testing mode and if levels are sequenced or as a set, if the agent is allowed to query novelty information</td/>
+			<td>a 19 bytes array indicating the time limit, interaction limit, number of levels, number of repeats per level, if in training or testing mode and if levels are sequenced or as a set, if the agent is allowed to query novelty information</td/>
 			<td>[time_limit]:4 bbytes integer<br/>
 			[interaction_limit] 4 byte integer<br/>
 			[#levels] 4 bytes integer<br/>
