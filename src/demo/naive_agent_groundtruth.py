@@ -54,7 +54,7 @@ class ClientNaiveAgent(Thread):
 		self.first_shot = True
 		self.prev_target = None
 		self.novelty_existence = -1;
-		self.sim_speed = 1
+		self.sim_speed = 50
 		#initialise colormap for the ground truth reader
 		f = open('./ColorMap.json','r')
 		result = json.load(f)
@@ -147,8 +147,14 @@ class ClientNaiveAgent(Thread):
 		return level
 
 	def get_next_level(self):
+
 		level = self.current_level + 1
 		n_levels = self.update_no_of_levels()
+
+		if n_levels == 0:
+			level = 1
+			return level
+
 		level = level%n_levels
 		if level <= 0:
 			level = 1
@@ -168,6 +174,11 @@ class ClientNaiveAgent(Thread):
 				self.solved[level - 1] = 1
 			level += 1
 		return scores
+
+	def check_current_level_score(self):
+		current_score = self.ar.get_current_score()
+		self._logger.info("current score is %d ", current_score)
+		return current_score
 
 	def update_no_of_levels(self):
 		# check the number of levels in the game
@@ -192,10 +203,6 @@ class ClientNaiveAgent(Thread):
 		n_levels = self.update_no_of_levels()
 
 		self.solved = [0 for x in range(n_levels)]
-
-		#load the initial level (default 1)
-		#Check my score
-		self.check_my_score()
 
 		#load next available level
 		self.current_level = self.ar.load_next_available_level()
@@ -231,8 +238,7 @@ class ClientNaiveAgent(Thread):
 				n_levels = self.update_no_of_levels()
 
 				#/System.out.println(" loading the level " + (self.current_level + 1) )
-				self.check_my_score()
-				self.current_level = self.get_next_level()
+				self.check_current_level_score()
 				self.current_level = self.ar.load_next_available_level()
 				self.novelty_existence = self.ar.get_novelty_info()
 
@@ -244,14 +250,13 @@ class ClientNaiveAgent(Thread):
 				#check for change of number of levels in the game
 				n_levels = self.update_no_of_levels()
 
-				self.check_my_score()
+				self.check_current_level_score()
 
 				#If lost, then restart the level
 				self.failed_counter += 1
 				if self.failed_counter > 0: #for testing , go directly to the next level
 
 					self.failed_counter = 0
-					self.current_level = self.get_next_level()
 					self.current_level = self.ar.load_next_available_level()
 					self.novelty_existence = self.ar.get_novelty_info()
 

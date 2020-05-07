@@ -1,5 +1,5 @@
 # Science Birds Basic Game Playing Software
-#### <p style="text-align: center;"> Alpha v 0.3.1 </p>
+#### <p style="text-align: center;"> Alpha v 0.3.2 </p>
 
 ## Table of contents
 1. [Requirements](#Requirements)
@@ -291,17 +291,18 @@ The ./src folder contains all the source code of the python naive agent. The age
 			<td>[level index]
 		</tr>
 		<tr>
-			<td>15</td>
+			<td>15 (This request should not be used during the evaluation)</td>
 			<td>Get the number of levels</td>
 			<td>[15]</td>
-			<td>four bytes array indicates the number of available levels</td>
+			<td>four bytes array indicates the number of available levels<br/>
+                        integer 0 will be returned if using this request during test harness</td>
 			<td>[number of level]</td>
 		</tr>
 		<tr>
-			<td>23</td>
+			<td>23 (This request should not be used during the evaluation)</td>
 			<td>Get my score</td>
 			<td>[23]</td>
-			<td>A 4 bytes array indicating the number of levels <br/> followed by ([number_of_levels] * 4) bytes array with every four<br/> slots indicates a best score for the corresponding level</td>
+			<td>integer 0 will be returned if using this request during test harness<br/>A 4 bytes array indicating the number of levels <br/> followed by ([number_of_levels] * 4) bytes array with every four<br/> slots indicates a best score for the corresponding level</td>
 			<td>[number_of_levels][score_level_1]....[score_level_n]<br/>
 			Note: This should be used carefully for the training mode, <br/>
 			becaues there may be large amount of levels used in the training.<br/>
@@ -487,7 +488,7 @@ The ./src folder contains all the source code of the python naive agent. The age
 			<td>a 19 bytes array indicating the time limit, interaction limit, number of levels, if in training or testing mode and if levels are sequenced or as a set, if the agent is allowed to query novelty information</td/>
 			<td>[time_limit]:4 bbytes integer<br/>
 			[interaction_limit] 4 byte integer<br/>
-			[#levels] 4 bytes integer<br/>
+			[#levels] 4 bytes integer (integer 0 will be returned during evaluation)<br/>
 			[attempts_per_level]4 bytes integer<br/>
 			[mode] 1 byte, 0 -> training, 1 -> testing <br/>
 			[if_as_a_set]:1 byte, 0 -> set, 1 -> sequence<br/>
