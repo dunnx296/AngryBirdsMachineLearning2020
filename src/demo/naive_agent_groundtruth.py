@@ -54,7 +54,7 @@ class ClientNaiveAgent(Thread):
 		self.first_shot = True
 		self.prev_target = None
 		self.novelty_existence = -1;
-		self.sim_speed = 50
+		self.sim_speed = 20
 		#initialise colormap for the ground truth reader
 		f = open('./ColorMap.json','r')
 		result = json.load(f)
@@ -483,7 +483,7 @@ class ClientNaiveAgent(Thread):
 
 						if dx < 0:
 							print ('ref point ', ref_point.X, ',', ref_point.Y)
-							self.ar.shoot(ref_point.X, ref_point.Y, dx, dy, 0, tap_time, False)
+							self.ar.shoot_and_record_ground_truth(ref_point.X, ref_point.Y, dx, dy, 0, tap_time, 1)
 							time.sleep(2/self.sim_speed)
 							state = self.ar.get_game_state()
 							if state == GameState.PLAYING:

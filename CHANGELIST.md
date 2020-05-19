@@ -1,3 +1,7 @@
+### List of Changes (release alpha v0.3.3)
+19th May 2020
+1. Add a new requet to send a batch of ground truths per n frames after a shot
+
 ### List of Changes (release alpha v0.3.0)
 7th Apr 2020
 1. Add test harness which generates test trials and send specific requests to the agent to perform the test trial

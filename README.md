@@ -1,5 +1,5 @@
 # Science Birds Basic Game Playing Software
-#### <p style="text-align: center;"> Alpha v 0.3.2 </p>
+#### <p style="text-align: center;"> Alpha v 0.3.3 </p>
 
 ## Table of contents
 1. [Requirements](#Requirements)
@@ -349,6 +349,24 @@ The ./src folder contains all the source code of the python naive agent. The age
 			<td>For example, the server received 5 shots, and the third one<br/> 
 			was not executed due to some reason, then the server will return<br/>
 			[1][1][0][1][1]</td>
+		</tr>
+		<tr>
+			<td>38</td>
+			<td>Shoot using the Cartesian coordinates [Safe mode*] with a batch of groundtruth as return value<br\>
+			</td>
+			<td>[31][fx][fy][dx][dy][t1][t2][requested_gt_frequency]<br/>
+			focus_x : the x coordinate of the focus point<br/>
+			focus_y: the y coordinate of the focus point<br/>
+			dx: the x coordinate of the release point minus focus_x<br/>
+			dy: the y coordinate of the release point minus focus_y<br/>
+			t1: the release time<br/>
+			t2: the gap between the release time and the tap time.<br/>
+			requested_gt_frequency: indicates how frequent the ground truth is batched
+			If t1 is set to 0, the server will execute the shot immediately.<br/>
+			The length of each parameter is 4 bytes</td>
+			<td>A batch of noisy groundtruth from the start of a shot to when the scene is stable again</td>
+			<td>[number_of_ground_truth_recorded][groundtruth 1 byte array length][groundtruth 1 bytes]...[groundtruth n byte array length][groundtruth n bytes]
+			<br/>The number of groundtruth will be zero if the shot is not executed correctly</td>
 		</tr>
 		<tr>
 			<td>41</td>
