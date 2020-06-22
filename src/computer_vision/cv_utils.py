@@ -6,8 +6,8 @@ Created on Tue Dec  3 08:22:08 2019
 @author: chengxue
 """
 import numpy as np
-from shapely.geometry import MultiPolygon, Polygon, box
-from shapely.ops import unary_union
+#from shapely.geometry import MultiPolygon, Polygon, box
+#from shapely.ops import unary_union
 
 class Rectangle:
     def __init__(self, *args, **kwargs):
@@ -184,51 +184,51 @@ class Rectangle:
 #    return plat_list
 
 
-def platformCombiner(parsed_json):
+# def platformCombiner(parsed_json):
     
-    L= []
+#     L= []
 
-    for item in parsed_json:
-        if item["type"] == "Platform":
-            poly = Polygon([(item["vertices"][0]["x"],item["vertices"][0]["y"]),(item["vertices"][1]["x"],item["vertices"][1]["y"]),(item["vertices"][2]["x"],item["vertices"][2]["y"]),(item["vertices"][3]["x"],item["vertices"][3]["y"])])
-            L.append(poly)  
+#     for item in parsed_json:
+#         if item["type"] == "Platform":
+#             poly = Polygon([(item["vertices"][0]["x"],item["vertices"][0]["y"]),(item["vertices"][1]["x"],item["vertices"][1]["y"]),(item["vertices"][2]["x"],item["vertices"][2]["y"]),(item["vertices"][3]["x"],item["vertices"][3]["y"])])
+#             L.append(poly)  
 
-    P = unary_union(L)
+#     P = unary_union(L)
 
-    if P.geom_type == 'Polygon':
-        P = MultiPolygon([P])
+#     if P.geom_type == 'Polygon':
+#         P = MultiPolygon([P])
     
     
-    plat_dict = []
+#     plat_dict = []
 
-    for Q in P:
-        temp_dict = {}
-        temp_dict['type'] = "Platform"
-        temp_dict['vertices'] = []
-        l1 = list(Q.exterior.coords)
-        x = set(list(zip(*list(Q.exterior.coords)))[0])
-        y = set(list(zip(*list(Q.exterior.coords)))[1])
+#     for Q in P:
+#         temp_dict = {}
+#         temp_dict['type'] = "Platform"
+#         temp_dict['vertices'] = []
+#         l1 = list(Q.exterior.coords)
+#         x = set(list(zip(*list(Q.exterior.coords)))[0])
+#         y = set(list(zip(*list(Q.exterior.coords)))[1])
         
-        if len(x) >= len(y):
-            for i in range(len(l1) - 1):
-                x1, y1 = l1[i]
-                x2, y2 = l1[i + 1]
-                if y1 == y2:
-                    continue
-                else:
-                    temp_dict['vertices'].append({"x": x1, "y": y1})
-                    temp_dict['vertices'].append({"x": x2, "y": y2})
+#         if len(x) >= len(y):
+#             for i in range(len(l1) - 1):
+#                 x1, y1 = l1[i]
+#                 x2, y2 = l1[i + 1]
+#                 if y1 == y2:
+#                     continue
+#                 else:
+#                     temp_dict['vertices'].append({"x": x1, "y": y1})
+#                     temp_dict['vertices'].append({"x": x2, "y": y2})
                     
-        else:
-            for i in range(len(l1) - 1):
-                x1, y1 = l1[i]
-                x2, y2 = l1[i + 1]
-                if x1 == x2:
-                    continue
-                else:
-                    temp_dict['vertices'].append({"x": x1, "y": y1})
-                    temp_dict['vertices'].append({"x": x2, "y": y2})
+#         else:
+#             for i in range(len(l1) - 1):
+#                 x1, y1 = l1[i]
+#                 x2, y2 = l1[i + 1]
+#                 if x1 == x2:
+#                     continue
+#                 else:
+#                     temp_dict['vertices'].append({"x": x1, "y": y1})
+#                     temp_dict['vertices'].append({"x": x2, "y": y2})
                     
-        plat_dict.append(temp_dict)    
-    return plat_dict
+#         plat_dict.append(temp_dict)    
+#     return plat_dict
 

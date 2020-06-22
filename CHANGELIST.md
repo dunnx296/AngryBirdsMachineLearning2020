@@ -1,3 +1,16 @@
+### List of Changes (release alpha v0.3.4)
+21st June 2020
+1. Fixed the science birds game (SB) and game playing interface (GPI) crash bug when the batch ground truth request sent but the shot is not being executed.
+    - one ground truth will be returned in such case
+2. Fixed SB crash bug when sending zoom out request sometimes
+3. The game level will be fully zoomed out by default after loading
+4. Changed configMeta.xml format  (see README.md for details)
+5. Changed game level name format
+5. Allow multiple agents to connect to one GPI.
+    - SB do not need to be started by the user, instead, one SB instance will be started automatically by the GPI when an new agent is connected to the GPI 
+    - A few command line arguments were added to the GPI (see README.md for details)
+6. Removed unstable game levels from the sample game levels
+
 ### List of Changes (release alpha v0.3.3)
 19th May 2020
 1. Add a new requet to send a batch of ground truths per n frames after a shot

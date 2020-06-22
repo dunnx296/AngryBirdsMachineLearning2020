@@ -9,7 +9,7 @@ import sys
 sys.path.append('..')
 sys.path.append('./src')
 import numpy as np
-import os
+#import os
 import cv2
 import json
 from computer_vision.game_object import GameObject, GameObjectType
@@ -20,7 +20,7 @@ class NotVaildStateError(Exception):
    pass
 
 class GroundTruthReader:
-    def __init__(self,json,look_up_matrix,look_up_obj_type):
+    def __init__(self,json, model, target_class):
 
         '''
         json : a list of json objects. the first element is int id, 2nd is png sreenshot
@@ -33,8 +33,8 @@ class GroundTruthReader:
 
         '''
 
-        self.look_up_matrix = look_up_matrix
-        self.look_up_obj_type = look_up_obj_type
+        self.model = model
+        self.target_class = target_class
 
         self.type_transformer = {
                 'bird_blue':'blueBird',
@@ -42,15 +42,15 @@ class GroundTruthReader:
                 'bird_black':'blackBird',
                 'bird_red':'redBird',
                 'bird_white':'whiteBird',
-                'Platform':'hill',
+                'platform':'hill',
                 'pig_basic_big' : 'pig',
                 'pig_basic_small' : 'pig',
                 'pig_basic_medium' : 'pig',
                 'TNT' : 'TNT',
                 'Slingshot':'slingshot',
-                'Ice' : 'ice',
-                'Stone' : 'stone',
-                'Wood' : 'wood',
+                'ice' : 'ice',
+                'stone' : 'stone',
+                'wood' : 'wood',
                 'unknown' : 'unknown'
                 }
 
@@ -126,32 +126,20 @@ class GroundTruthReader:
             else:
                 colorMap = j['colormap']
                 for pair in colorMap:
-                    obj_matrix[int(pair['color'])][obj_num] = pair['percent']
+                    obj_matrix[int(float(pair['color']))][obj_num] = pair['percent']
 
             obj_num += 1
 
-        #normalise the obj_matrix
+        #model predict
+        intercept = self.model[:,0].reshape(-1,1)
+        model_coef = self.model[:,1:]
 
-        norm = np.sqrt((obj_matrix**2).sum(0)).reshape(1,-1)
-
-
-        #if the norm is 0, it means that all of the color values are 0.
-        #so anyway the values are going to be just 0 after dividing any number
-        #here we just use 1
-        norm[norm==0] = 1
-
-
-        obj_matrix = obj_matrix / norm
-
-        #calculate the dot product of different objects with the templete
-        dot_product = self.look_up_matrix@obj_matrix
-        obj_types[obj_types=='0.0'] =  self.look_up_obj_type[dot_product.argmax(axis=0)][(obj_types=='0.0')]
+        predicts = intercept + model_coef @ obj_matrix
+        predict_class = predicts.argmax(0)
+        predict_class = np.array(list(map(lambda x : self.target_class[x],predict_class)))
+        obj_types[obj_types=='0.0'] =  predict_class[obj_types=='0.0']
 
         #put unknow for the dot products less than a threshold
-
-        threshold = 0.6
-
-        obj_types[dot_product.max(axis=0) < threshold] = "unknown"
 
         obj_num = 0
         for j in self.alljson:
@@ -195,8 +183,8 @@ class GroundTruthReader:
         x = []
         y = []
         for v in vertices:
-            x.append(int(v['x']))
-            y.append(480 - int(v['y']))
+            x.append(int(float(v['x'])))
+            y.append(480 - int(float(v['y'])))
         points = (np.array(y),np.array(x))
         rect = Rectangle(points)
         return rect
@@ -254,7 +242,6 @@ class GroundTruthReader:
         else:
             return ret
 
-
     def showResult(self):
         '''
         draw the ground truth result
@@ -264,7 +251,7 @@ class GroundTruthReader:
         contour_types = []
         for obj in self.alljson:
             if obj['type'] == 'Ground':
-                y_index = 480 - int(obj['yindex'] )
+                y_index = 480 - int(float(obj['yindex']))
             else:
                 #create contours
                 contour = np.zeros((len(obj['vertices']),1,2))
@@ -293,85 +280,9 @@ class GroundTruthReader:
 
 
 if __name__ == "__main__":
-    root = "/home/ps/SAILON/git/pythongameplayingagent/"
-    paths = os.listdir(root)
-#    f = open(root + '0_GTData.json','r')
-    f = open('./ColorMap.json','r')
-    result = json.load(f)
-
-    look_up_matrix = np.zeros((len(result),256))
-    look_up_obj_type = np.zeros(len(result)).astype(str)
-
-    obj_number = 0
-    for d in result:
-
-        if 'effects_21' in d['type']:
-            obj_name = 'Platform'
-
-        elif 'effects_34' in d['type']:
-            obj_name = 'TNT'
-
-        elif 'ice' in d['type']:
-            obj_name = 'Ice'
-
-        elif 'wood' in d['type']:
-            obj_name = 'Wood'
-
-        elif 'stone' in d['type']:
-            obj_name = 'Stone'
-
-        else:
-            obj_name = d['type'][:-2]
-
-        obj_color_map = d['colormap']
-
-        look_up_obj_type[obj_number] = obj_name
-        for pair in obj_color_map:
-            look_up_matrix[obj_number][int(pair['x'])] = pair['y']
-
-        obj_number+=1
-
-    look_up_matrix = look_up_matrix / np.sqrt((look_up_matrix**2).sum(1)).reshape(-1,1)
-
-
-    type_transformer = {
-                    'bird_blue':'ABType.BlueBird',
-                    'bird_yellow':'ABType.YellowBird',
-                    'bird_black':'ABType.BlackBird',
-                    'bird_red':'ABType.RedBird',
-                    'bird_white':'ABType.WhiteBird',
-                    'Platform':'ABType.Hill',
-                    'pig_basic_big' : 'ABType.Pig',
-                    'pig_basic_small' : 'ABType.Pig',
-                    'pig_basic_medium' : 'ABType.Pig',
-                    "pig_king": 'ABType.Pig',
-                    'TNT' : 'ABType.TNT',
-                    'Slingshot':'slingshot',
-                    'Ice' : 'ABType.Ice',
-                    'Stone' : 'ABType.Stone',
-                    'Wood' : 'ABType.Wood'
-                    }
+    model = np.loadtxt("model",delimiter=",")
+    target_class = list(map(lambda x : x.replace("\n", ""),open('target_class').readlines()))
 
     result = json.load(open("../../0_GTData.json",'r'))
 
-    gt = GroundTruthReader(result,look_up_matrix,look_up_obj_type)
-
-
-    ff = open('forJava.txt','w+')
-
-    for i in range(len(look_up_matrix)):
-        for j in range(len(look_up_matrix[i])):
-            if j != len(look_up_matrix[i]) - 1:
-                ff.write(str(look_up_matrix[i][j]) + ' ')
-            else:
-                ff.write(str(look_up_matrix[i][j]) + '\n')
-    ff.close()
-
-
-    #transfer to java
-#
-#    for k,v in value_key.items():
-#        try:
-#            print("lookupTable3Color.put(\"{},{},{}\",{});".format(k[0],k[1],k[2],type_transformer[v]))
-#        except:
-#            continue
+    gt = GroundTruthReader(result,model,target_class)

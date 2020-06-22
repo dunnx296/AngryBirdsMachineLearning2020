@@ -1,6 +1,5 @@
 import sys
 sys.path.append('..')
-
 import numpy as np
 from math import atan, atan2, acos, sqrt, sin, cos, radians
 from PIL import Image, ImageDraw
@@ -8,6 +7,7 @@ from PIL import Image, ImageDraw
 #TODO change geometric libs to shapely
 from computer_vision.cv_utils import Rectangle
 from utils.point2D import Point2D
+import logging
 
 
 class SimpleTrajectoryPlanner:
@@ -121,8 +121,8 @@ class SimpleTrajectoryPlanner:
         pullback = self._scale * self.STRETCH * cos(self._theta)
         distance = (tap_point.X - self._ref.X + pullback) / self._scale
 
-        print("distance " , distance)
-        print("velocity " , self._ux)
+        #print("distance " , distance)
+        #print("velocity " , self._ux)
 
         return (int)(distance / self._ux * self._time_unit)
 
@@ -202,10 +202,10 @@ class SimpleTrajectoryPlanner:
         """
 
         mag = sling.height * 5
-        print('mag ', mag)
+        #print('mag ', mag)
         ref = self.get_reference_point(sling)
-        print('ref ', ref)
-        print('cos theta ',cos(theta))
+        #print('ref ', ref)
+        #print('cos theta ',cos(theta))
 #        print('sin theta ',sin(theta))
         release = Point2D(int(ref.X - mag * cos(theta)), int(ref.Y + mag * sin(theta)))
 

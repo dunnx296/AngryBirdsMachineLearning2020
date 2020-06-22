@@ -42,16 +42,40 @@ Pre-compiled Science Birds for different platforms are in folder:
 
 ## Run the Agent<a name="Run"></a>
 1. Run the game playing interface
-	- the runnable jar file is in the root folder of the repository called game_playing_interface.jar
+	- Unzip the game that suits your OS in <code>./ScienceBirds</code> folder 
+	- Navigate to the unzipped game folder.
 	- use the code below to run:
 
 <code>java -jar  game_playing_interface.jar</code>
+Arguments:
+- --trials-per-agent [number of trials per agent]: the number of trials per agent, default  
+- --trial-start-index [trial index]: the start trial index for the first agent, default 0 
+    - NOTE: this argument is only valid if --trials-per-agent is used and the its value is greater than zero 
+    - otherwise all agents will start at trial 0 and play through all trials  
+- --agent-name [agent name]: the agent to be run in this GPI
+- --config-path [path to config.xml]: the path to the config.xml, default the same directory as game_playing_interface.jar
+- --agent-start-port [start port of SB]: the port of the first SB instance, it will increase by 1 afterwards. Default 9001
+- --informed-only: only run agents on the trials trials that inform the novelty appearance
+- --uninformed-only: only run agents on the trials trials that do not inform the novelty appearance
+- --generate-config: generate a new config.xml for each agent in the current run. The configMeta.xml should be placed in 
+	- Linux
+	
+	<code>ScienceBirds_Linux/ScienceBirds_Linux_Data/StreamingAssets/</code>
+	- MacOS
+	
+	<code>ab.app/Contents/Resources/Data/StreamingAssets/</code>
+	- Windows
 
-2. Run the Science Birds game executable file to start a game instance
+	<code>ScienceBirds_Win/Science Birds_Data/StreamingAssets/</code> 
+
+
+2. The Science Birds game does not need to be run separately, GPI will start it automatically
 	- The Science Birds game used in this framework is a modified version of Lucas N. Ferreira's work that can be found in his [Github repository](https://github.com/lucasnfe/science-birds)
-3. Run the Python naive agent 
 
+
+3. Run the Python naive agent 
 <code>python3 main.py</code>
+
 
 4. Run the Python deep Q-learning agent 
     - The dq agent is placed in ./src/demo/ddqn_test_harness_agent.py
