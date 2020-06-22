@@ -6,10 +6,10 @@
 3. The game level will be fully zoomed out by default after loading
 4. Changed configMeta.xml format  (see README.md for details)
 5. Changed game level name format
-5. Allow multiple agents to connect to one GPI.
+6. Allow multiple agents to connect to one GPI.
     - SB do not need to be started by the user, instead, one SB instance will be started automatically by the GPI when an new agent is connected to the GPI 
     - A few command line arguments were added to the GPI (see README.md for details)
-6. Removed unstable game levels from the sample game levels
+7. Removed unstable game levels from the sample game levels
 
 ### List of Changes (release alpha v0.3.3)
 19th May 2020
