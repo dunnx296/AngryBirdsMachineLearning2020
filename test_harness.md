@@ -128,6 +128,3 @@ The parameters for generating test trials are in <code>configMeta.xml</code>
 #### Data recording
 1. The recorded data can be found in the root folder of the science birds game, with the name <code>Evaluation_[timestamp]</code>
 2. The csv files with data recorded can be found in this folder
-3. To visualize the data:
-    - in <code>./data_visualization</code>, there are two ways of visualizing the collected data. 
-        - A simple python version can be used by running <code>python3  </code>

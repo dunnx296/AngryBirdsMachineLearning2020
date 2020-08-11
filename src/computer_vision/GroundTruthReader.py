@@ -148,7 +148,8 @@ class GroundTruthReader:
 
 
                 rect = self._getRect(j)
-                vertices = j["vertices"]
+                contours = j['contours']
+                vertices = contours[0]['vertices']
 
                 game_object = GameObject(rect,GameObjectType(self.type_transformer["Slingshot"]),vertices)
 
@@ -162,7 +163,8 @@ class GroundTruthReader:
 
             else:
                 rect = self._getRect(j)
-                vertices = j["vertices"]
+                contours = j['contours']
+                vertices = contours[0]['vertices']
                 game_object = GameObject(rect,GameObjectType(self.type_transformer[obj_types[obj_num]]),vertices)
 
                 try:
@@ -179,7 +181,9 @@ class GroundTruthReader:
         input: json object
         output: rectangle of the object
         '''
-        vertices = j['vertices']
+        contours = j['contours']
+        vertices = contours[0]['vertices']
+
         x = []
         y = []
         for v in vertices:

@@ -48,6 +48,7 @@ Pre-compiled Science Birds for different platforms are in folder:
 
 <code>java -jar  game_playing_interface.jar</code>
 Arguments:
+- --headless: to run the software in headless mode (headless mode does not work on Windows now due to a potential bug in Unity)
 - --trials-per-agent [number of trials per agent]: the number of trials per agent, default  
 - --trial-start-index [trial index]: the start trial index for the first agent, default 0 
     - NOTE: this argument is only valid if --trials-per-agent is used and the its value is greater than zero 
@@ -186,28 +187,28 @@ The ./src folder contains all the source code of the python naive agent. The age
 
 1. Ground truth data of game objects are stored in a Json object. The json object describs an array where each element describes a game object. Game object categories and their properties are described below:
 	- Ground: the lowest unbreakable flat support surface 
-		- property: id = 'object [i]' 
+		- property: id = 'the unique id of the object'
 		- property: type = 'Ground'
 		- property: yindex = [the y coordinate of the ground line]
 	- Platform: Unbreakable obstacles
-		- property: id = 'object [i]'	
+		- property: id = 'the unique id of the object'
 		- property: type = 'Object'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
+		- property: vertices = [a list contours each contains a list of ordered 2d points that represents the polygon shape of the object]
 		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]
 	- Trajectory: the dots that represent the trajectories of the birds
-		- property: id = 'object [i]'
+		- property: id = 'the unique id of the object'
 		- property: type = 'Trajectory'
 		- property: location = [a list of 2d points that represents the trajectory dots]
 
 	- Slingshot: Unbreakable slingshot for shooting the bird
-		- property: id = 'object [i]'
+		- property: id = 'the unique id of the object'
 		- property: type = 'Slingshot'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
+		- property: vertices = [a list contours each contains a list of ordered 2d points that represents the polygon shape of the object]
 		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]
 	- Red Bird:
-		- property: id = 'object [i]'
+		- property: id = 'the unique id of the object'
 		- property: type = 'Object'
-		- property: vertices = [a list of ordered 2d points that represents the polygon shape of the object]
+		- property: vertices = [a list contours each contains a list of ordered 2d points that represents the polygon shape of the object]
 		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]	
 	- all objects below have the same representation as red bird
 	- Blue Bird:
@@ -226,7 +227,7 @@ The ./src folder contains all the source code of the python naive agent. The age
 3. Round objects are also represented as polygons with a list of vertices
 4. Ground truth with noise
 	- If noisy ground truth is requested, the noise will be applied to each point in vertices of the game objects except the **ground**, **all birds** and the **slingshot**
-	- The noise for 'vertices' is applied to all vertices with the same amount within 5 pixels
+	- The noise for 'vertices' is applied to all vertices with the same amount within 2 pixels
 	- The colour map has a noise of +/- 2%. 
 	- The colour is the colour map compresses 24 bit RGB colour into 8 bit
 	    - 3 bits for Red, 3 bits for Green and 2 bits for Blue

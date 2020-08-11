@@ -1,3 +1,10 @@
+### List of Changes (release alpha v0.3.5)
+1. Add --headlesss command line argument for that gameplayinginterface.jar that run the system headless
+2. Reduce noise level to up to 2 pixels for the objects in the noisy ground truth
+3. Change the object IDs in the groundtruth to unique IDs for each object that can be used for object tracking
+4. Change the vertices representation for objects in the ground truth to a list of contours. Each contour contains a list of vertices.
+5. Speed up the ground truth generation from ~100 (80 headless) ms/frame to ~30 (20 headless) ms/frame
+
 ### List of Changes (release alpha v0.3.4)
 21st June 2020
 1. Fixed the science birds game (SB) and game playing interface (GPI) crash bug when the batch ground truth request sent but the shot is not being executed.
