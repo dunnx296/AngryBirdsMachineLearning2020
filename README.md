@@ -1,5 +1,5 @@
 # Science Birds Basic Game Playing Software
-#### <p style="text-align: center;"> Alpha v 0.3.3 </p>
+#### <p style="text-align: center;"> Alpha v 0.3.6 </p>
 
 ## Table of contents
 1. [Requirements](#Requirements)
@@ -69,6 +69,12 @@ Arguments:
 
 	<code>ScienceBirds_Win/Science Birds_Data/StreamingAssets/</code> 
 
+- --dev: run the game playing interface to access more information about the game objects
+    - in dev mode, the type of the object in the ground truth is the true object type
+    - in dev mode, agent command groundtruthwithscreenshot and groundtruthwithoutscreenshot will return non-noisy groundtruth
+    - in dev mode, agent command ShootAndRecordGroundTruth will return non-noisy groundtruth
+    - in dev mode, object current health value (currentLife) will be present. Unbreakable objects (slingshot and platform) will have max float value (3.402823E+38 in the ground truth json). In normal mode, currentLife will not be present. Ground and Trajectory do not have currentLife in any mode
+	
 
 2. The Science Birds game does not need to be run separately, GPI will start it automatically
 	- The Science Birds game used in this framework is a modified version of Lucas N. Ferreira's work that can be found in his [Github repository](https://github.com/lucasnfe/science-birds)
@@ -185,31 +191,35 @@ The ./src folder contains all the source code of the python naive agent. The age
 
 ## Ground Truth Data Structure<a name="Groundtruth"></a>
 
-1. Ground truth data of game objects are stored in a Json object. The json object describs an array where each element describes a game object. Game object categories and their properties are described below:
+1. Ground truth data of game objects are stored in a Json object in [GeoJSON](https://tools.ietf.org/html/rfc7946) format. The json object describs an array where each element describes a game object. Game object categories and their properties are described below:
 	- Ground: the lowest unbreakable flat support surface 
+		- geometry: N/A
 		- property: id = 'the unique id of the object'
 		- property: type = 'Ground'
 		- property: yindex = [the y coordinate of the ground line]
 	- Platform: Unbreakable obstacles
+		- geometry: polygon
 		- property: id = 'the unique id of the object'
-		- property: type = 'Object'
-		- property: vertices = [a list contours each contains a list of ordered 2d points that represents the polygon shape of the object]
+		- property: type = 'Object' or 'Platform'
+		- property: currentLife = [remaining life point] (only appear in dev mode; max value for unbreakable object)  
+ object]
 		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]
 	- Trajectory: the dots that represent the trajectories of the birds
+		- geometry: MultiPoint
 		- property: id = 'the unique id of the object'
 		- property: type = 'Trajectory'
-		- property: location = [a list of 2d points that represents the trajectory dots]
-
 	- Slingshot: Unbreakable slingshot for shooting the bird
+		- geometry: polygon
 		- property: id = 'the unique id of the object'
 		- property: type = 'Slingshot'
-		- property: vertices = [a list contours each contains a list of ordered 2d points that represents the polygon shape of the object]
 		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]
+		- property: currentLife = [remaining life point] (only appear in dev mode; max value for unbreakable object) 
 	- Red Bird:
+		- geometry: polygon
 		- property: id = 'the unique id of the object'
-		- property: type = 'Object'
-		- property: vertices = [a list contours each contains a list of ordered 2d points that represents the polygon shape of the object]
-		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]	
+		- property: type = 'Object'(in evaluation) or 'red_bird_[index]'(in dev mode)
+		- property: colormap = [a list of compressed 8-bit (RRRGGGBB) colour and their percentage in the object]
+		- property: currentLife = [remaining life point] (only appear in dev mode)	
 	- all objects below have the same representation as red bird
 	- Blue Bird:
 	- Yellow Bird:
@@ -223,7 +233,7 @@ The ./src folder contains all the source code of the python naive agent. The age
 	- Ice Block: Breakable ice blocks
 	- Stone Block: Breakable stone blocks
 	
-2. ./src/computer_vision/GroundTruthReader.py is sample tool to read the parse ground truth json object. The coordination system are from the Science Birds and has been converted to the agent's coordination system.
+2. ./src/computer_vision/GroundTruthReader.py is sample tool to read the parse ground truth json object.
 3. Round objects are also represented as polygons with a list of vertices
 4. Ground truth with noise
 	- If noisy ground truth is requested, the noise will be applied to each point in vertices of the game objects except the **ground**, **all birds** and the **slingshot**
@@ -235,6 +245,73 @@ The ./src folder contains all the source code of the python naive agent. The age
 		- example: (127, 0.5) means 50% pixels in the objects are with colour 127  
 	- The noise is uniformly distributed
 	- We will later offer more sophisticated and adjustable noise. 
+5. Example ground truth Json Object:
+```javascript
+[
+  {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": {},
+        "properties": {
+          "id": "-472",
+          "label": "Ground",
+          "yindex": 300,
+          "colormap": []
+        }
+      },
+	  {
+		"type": "Feature",
+		"geometry":{
+			"type":"MultiPoint",
+			"coordinates":[
+				[195,188],[391,108],[591,143]
+			]
+		},
+		"properties":{"id":"-18206","label":"Trajectory","colormap":[]}
+	  },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [207,216],[207,167],[224,167],[224,216]
+            ]
+          ]
+        },
+        "properties": {
+          "id": "-608",
+          "label": "Slingshot",
+          "colormap": [],
+          "currentLife": 3.402823e+38
+        }
+      },
+	  {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [587,188],[587,187],[587,184],[583,184],[581,183]
+            ]
+          ]
+        },
+        "properties": {
+          "id": "-716",
+          "label": "pig_basic_medium_1",
+          "colormap": [
+            {"color": 0,"percent": 0.5},{"color": 4,"percent": 0.5}
+          ],
+          "currentLife": 2.5
+        }
+      }
+    ]
+  }
+]
+```
+
 ## Communication Protocols<a name="Protocol"></a>
 
 <table style="text-align:center;">

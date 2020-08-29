@@ -32,7 +32,6 @@ class GroundTruthReader:
         look_up_obj_type: length n array, storing the type corrsponding to the look_up_matrix
 
         '''
-
         self.model = model
         self.target_class = target_class
 
@@ -75,8 +74,9 @@ class GroundTruthReader:
         #combine the platforms
         #replace exsiting platforms with new combined platforms
         self.alljson = []
+        json = json[0]['features']
         for j in json:
-            if j['type'] != 'Platform':
+            if j['properties']['label'] != 'Platform':
                 self.alljson.append(j)
 
         self._parseJsonToGameObject()
@@ -120,11 +120,11 @@ class GroundTruthReader:
         obj_types = np.zeros(obj_total_num).astype(str)
 
         for j in self.alljson:
-            if j['type'] == "Slingshot" or j['type'] == "Ground" or j['type'] == "Trajectory":
-                obj_types[obj_num] = j['type']
+            if j['properties']['label'] == "Slingshot" or j['properties']['label'] == "Ground" or j['properties']['label'] == "Trajectory":
+                obj_types[obj_num] = j['properties']['label']
 
             else:
-                colorMap = j['colormap']
+                colorMap = j['properties']['colormap']
                 for pair in colorMap:
                     obj_matrix[int(float(pair['color']))][obj_num] = pair['percent']
 
@@ -144,12 +144,12 @@ class GroundTruthReader:
         obj_num = 0
         for j in self.alljson:
 
-            if j['type'] == "Slingshot":
+            if j['properties']['label'] == "Slingshot":
 
 
                 rect = self._getRect(j)
-                contours = j['contours']
-                vertices = contours[0]['vertices']
+                contours = j['geometry']['coordinates']
+                vertices = contours[0]
 
                 game_object = GameObject(rect,GameObjectType(self.type_transformer["Slingshot"]),vertices)
 
@@ -158,13 +158,13 @@ class GroundTruthReader:
                 except:
                     self.allObj[self.type_transformer["Slingshot"]] = [game_object]
 
-            elif j['type'] == "Ground" or j['type'] == "Trajectory":
+            elif j['properties']['label'] == "Ground" or j['properties']['label'] == "Trajectory":
                 pass
 
             else:
                 rect = self._getRect(j)
-                contours = j['contours']
-                vertices = contours[0]['vertices']
+                contours = j['geometry']['coordinates']
+                vertices = contours[0]
                 game_object = GameObject(rect,GameObjectType(self.type_transformer[obj_types[obj_num]]),vertices)
 
                 try:
@@ -181,14 +181,14 @@ class GroundTruthReader:
         input: json object
         output: rectangle of the object
         '''
-        contours = j['contours']
-        vertices = contours[0]['vertices']
+        contours = j['geometry']['coordinates']
+        vertices = contours[0]
 
         x = []
         y = []
         for v in vertices:
-            x.append(int(float(v['x'])))
-            y.append(480 - int(float(v['y'])))
+            x.append(int(float(v[0])))
+            y.append(int(float(v[1])))
         points = (np.array(y),np.array(x))
         rect = Rectangle(points)
         return rect
@@ -255,13 +255,13 @@ class GroundTruthReader:
         contour_types = []
         for obj in self.alljson:
             if obj['type'] == 'Ground':
-                y_index = 480 - int(float(obj['yindex']))
+                y_index = int(float(obj['yindex']))
             else:
                 #create contours
                 contour = np.zeros((len(obj['vertices']),1,2))
                 for i in range(len(obj['vertices'])) :
                     contour[i,:,0] = obj['vertices'][i]['x']
-                    contour[i,:,1] = 480 - obj['vertices'][i]['y']
+                    contour[i,:,1] = obj['vertices'][i]['y']
 
                 contours.append(contour.astype(int))
                 contour_types.append(obj['type'])
