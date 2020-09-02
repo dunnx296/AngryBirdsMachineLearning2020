@@ -55,7 +55,8 @@ Arguments:
     - otherwise all agents will start at trial 0 and play through all trials  
 - --agent-name [agent name]: the agent to be run in this GPI
 - --config-path [path to config.xml]: the path to the config.xml, default the same directory as game_playing_interface.jar
-- --agent-start-port [start port of SB]: the port of the first SB instance, it will increase by 1 afterwards. Default 9001
+- --game-start-port [start port of SB]: the port of the first SB instance, it will increase by 1 afterwards. Default 9001
+- --agent-port [port for the agent to connect]: the port that the game playing interface opens for agent connection. Default 2004
 - --informed-only: only run agents on the trials trials that inform the novelty appearance
 - --uninformed-only: only run agents on the trials trials that do not inform the novelty appearance
 - --generate-config: generate a new config.xml for each agent in the current run. The configMeta.xml should be placed in 
@@ -191,7 +192,13 @@ The ./src folder contains all the source code of the python naive agent. The age
 
 ## Ground Truth Data Structure<a name="Groundtruth"></a>
 
-1. Ground truth data of game objects are stored in a Json object in [GeoJSON](https://tools.ietf.org/html/rfc7946) format. The json object describs an array where each element describes a game object. Game object categories and their properties are described below:
+1. Ground truth data of game objects are stored in a Json object in [GeoJSON](https://tools.ietf.org/html/rfc7946) inspired format. The differences between the used format and GeoJSON are:
+    - The Polygon contours may not be closed, i.e., the last point in the contour may not be the same as the first one
+    - The point coordinates are in integer format, but not long, lat format with decimals
+    - The Ground object has an empty geometry element 
+
+ 
+The json object describs an array where each element describes a game object. Game object categories and their properties are described below:
 	- Ground: the lowest unbreakable flat support surface 
 		- geometry: N/A
 		- property: id = 'the unique id of the object'
