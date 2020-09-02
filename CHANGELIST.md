@@ -6,7 +6,8 @@
   - under dev mode, agent command ShootAndRecordGroundTruth will return non-noisy groundtruth
 2. Coordination system of the agent and the science birds game is consistent
 3. The log of the science birds game can be found in the same folder as the game executable, named sciencebirds.log
-4. The ground truth json format has been changed to GeoJSON inspired format (the differences can be found in README.md). Details about the new format is here[link] (an example of the new format can be found here[link]). 
+<<<<<<< HEAD
+4. The ground truth json format has been changed to GeoJSON inspired format (the differences can be found in README.md).An example of the new format can be found [here](https://gitlab.com/aibirds/sciencebirdsframework/-/blob/release/alpha0.3.6/README.md#Groundtruth).
 5. The published novelty level 3 type 7 has been fixed
 6. Add command line argument --agent-port that specify the port for the agent to connect
 
