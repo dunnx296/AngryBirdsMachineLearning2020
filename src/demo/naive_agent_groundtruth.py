@@ -300,7 +300,10 @@ class ClientNaiveAgent(Thread):
                 self.logger.info("received request of novelty likelihood")
                 novelty_likelihood=0.9
                 non_novelty_likelihood=0.1
-                self.ar.report_novelty_likelihood(novelty_likelihood,non_novelty_likelihood)
+                novel_obj_ids = {1,-2,-398879789}
+                novelty_level = 0
+                novelty_description = "";
+                self.ar.report_novelty_likelihood(novelty_likelihood,non_novelty_likelihood,novel_obj_ids,novelty_level,novelty_description)
 
             elif state == GameState.NEWTRIAL:
                 self.repeated_gt_counter = 0
@@ -538,9 +541,13 @@ class ClientNaiveAgent(Thread):
 
                         if dx < 0:
                             self.logger.info('ref point %s, %s'%(ref_point.X, ref_point.Y))
+                            self.logger.info('tap time %s '%(tap_time))
                             #self.ar.shoot(ref_point.X, ref_point.Y, dx, dy, 0, tap_time, False)
                             # used batch gt shoot
-                            self.ar.shoot_and_record_ground_truth(ref_point.X, ref_point.Y, dx, dy, 0, tap_time, 1)
+
+                            # the science birds game will use the true ref_point for the shot
+                            # only the release point is required here
+                            self.ar.shoot_and_record_ground_truth(release_point.X, release_point.Y, 0, tap_time, 1)
                             time.sleep(2/self.sim_speed)
                             state = self.ar.get_game_state()
                             if state == GameState.PLAYING:

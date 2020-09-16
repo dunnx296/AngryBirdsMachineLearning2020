@@ -1,5 +1,5 @@
 # Science Birds Basic Game Playing Software
-#### <p style="text-align: center;"> Alpha v 0.3.6 </p>
+#### <p style="text-align: center;"> Alpha v 0.3.7 </p>
 
 ## Table of contents
 1. [Requirements](#Requirements)
@@ -426,7 +426,7 @@ The json object describs an array where each element describes a game object. Ga
 			<td>31</td>
 			<td>Shoot using the Cartesian coordinates [Safe mode*]<br\>
 			</td>
-			<td>[31][fx][fy][dx][dy][t1][t2]<br/>
+			<td>[31][fx][fy][t1][t2]<br/>
 			focus_x : the x coordinate of the focus point<br/>
 			focus_y: the y coordinate of the focus point<br/>
 			dx: the x coordinate of the release point minus focus_x<br/>
@@ -463,7 +463,7 @@ The json object describs an array where each element describes a game object. Ga
 			<td>38</td>
 			<td>Shoot using the Cartesian coordinates [Safe mode*] with a batch of groundtruth as return value<br\>
 			</td>
-			<td>[31][fx][fy][dx][dy][t1][t2][requested_gt_frequency]<br/>
+			<td>[31][fx][fy][t1][t2][requested_gt_frequency]<br/>
 			focus_x : the x coordinate of the focus point<br/>
 			focus_y: the y coordinate of the focus point<br/>
 			dx: the x coordinate of the release point minus focus_x<br/>
@@ -481,7 +481,7 @@ The json object describs an array where each element describes a game object. Ga
 			<td>41</td>
 			<td>Shoot using the Cartesian coordinates [Fast mode**]<br\>
 			</td>
-			<td>[41][fx][fy][dx][dy][t1][t2]<br/>
+			<td>[41][fx][fy][t1][t2]<br/>
 			The length of each parameter is 4 bytes</td>
 			<td>OK/ERR</td>
 			<td>[1]/[0]</td>
@@ -594,17 +594,8 @@ The json object describs an array where each element describes a game object. Ga
 		<tr>
 			<td>66</td>
 			<td>Report Novelty Likelihood</td>
-			<td>[66][novelty_likelihood][non_novelty_likelihood]<br/>
-			The length of each parameter is 4 bytes</td>
-			<td>OK/ERR</td/>
-			<td>[1][0]</td>
-		</tr>
-		<tr>
-			<td>67</td>
-			<td>Report Novelty Description</td>
-			<td>[67][msg_length][novelty_description]<br/>
-			msg_length:4 bytes int<br/>
-			novelty_description:[msg_length] bytes string</td>
+			<td>[66][novelty_likelihood][non_novelty_likelihood][number_of_IDs][ID_1]...[ID_n][novelty_level][description_byte_array_length][novelty_description]<br/>
+			[4 bytes][4 bytes][4 bytes][n*4 bytes][4 bytes][4 bytes][description_byte_array_length]</td>
 			<td>OK/ERR</td/>
 			<td>[1][0]</td>
 		</tr>

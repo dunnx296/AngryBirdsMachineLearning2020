@@ -70,9 +70,6 @@ class GroundTruthReader:
                 'Wood' : (31,117,210)[::-1]
                 }
 
-
-        #combine the platforms
-        #replace exsiting platforms with new combined platforms
         self.alljson = []
         json = json[0]['features']
         for j in json:
