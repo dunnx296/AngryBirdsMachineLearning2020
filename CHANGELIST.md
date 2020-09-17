@@ -7,6 +7,7 @@
     - novelty description 
 3. After loading a new game instance, the first groun truth will be returned after the scene is fully zoomed out
 4. Novelty level 3 type 7 is not working in 0.3.6. It has been fixed in this version 
+5. Adapted DQ agent to the new interface
 ### List of Changes (release alpha v0.3.6)
 1. Development mode is added
   - use --dev when running the game playing interface to access more information about the game objects

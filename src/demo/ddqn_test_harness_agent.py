@@ -43,43 +43,49 @@ import shutil
 import os
 from PIL import ImageFile
 from threading import Thread
-from client.agent_client import AgentClient, GameState
-from trajectory_planner.trajectory_planner import SimpleTrajectoryPlanner
-from computer_vision.GroundTruthReader import GroundTruthReader, NotVaildStateError
 import time
+try:
+    from client.agent_client import AgentClient, GameState, RequestCodes
+    from trajectory_planner.trajectory_planner import SimpleTrajectoryPlanner
+    from computer_vision.GroundTruthReader import GroundTruthReader,NotVaildStateError
+    from computer_vision.game_object import GameObjectType
+    from utils.point2D import Point2D
+    from computer_vision.GroundTruthTest import GroundTruthTest
+
+except ModuleNotFoundError:
+    from src.client.agent_client import AgentClient, GameState, RequestCodes
+    from src.trajectory_planner.trajectory_planner import SimpleTrajectoryPlanner
+    from src.computer_vision.GroundTruthReader import GroundTruthReader,NotVaildStateError
+    from src.computer_vision.game_object import GameObjectType
+    from src.computer_vision.GroundTruthTest import GroundTruthTest
 
 # Actions x y in domain of
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-# TRAINING/ EVALUATION SWITCH Parameters
-IS_IN_TRAINING_MODE = True # indicates if the agent is in training mode, switching it off will stop agent from training
-EXPLORATION_EPSILON_BEFORE_EVAL = 0.99 # just needed to preserve exploration after evaluation is done
+
 
 # Both scores are reset after finishing
-EVAL_LEVELS_NUMBER = 51 # total number of eval levels (make sure to add 1 to total number of levels!!! e.g. 50 lvls = 51)
-TRAIN_LEVELS_NUMBER = 1501 # total number of train levels (make sure to add 1 to total number of levels!!! e.g. 300 lvls = 301)
-TRAINING_SCORES = np.zeros([TRAIN_LEVELS_NUMBER, 3]) # 300 training levels, for each level we have: level score, Won or Not?, Num of birds used
-EVAL_SCORES = np.zeros([EVAL_LEVELS_NUMBER, 3]) # 50 evaluation levels, for each level we have: level score, Won or Not?, Num of birds used
-TRAINING_SET_TIMES = 0 # num of times all train levels were played
-EVAL_SET_TIMES = -1 # num of times all eval levels were played
+
 
 # DRL PARAMETERS
-START_EPSILON = EXPLORATION_EPSILON_BEFORE_EVAL  # Start exploring with this probability
-END_EPSILON = 0.0001  # Finish exploring on this probability
-DECAY_STEPS = 200000  # How many steps epsilon should be decayed from s to end
-BATCH_SIZE = 32
+START_EPSILON = 0.13 # Start exploring with this probability
+END_EPSILON = 0.1  # Finish exploring on this probability
+DECAY_STEPS = 4000000  # How many steps epsilon should be decayed from s to end
+BATCH_SIZE = 64
 UPDATE_FREQUENCY = 4  # Update target q network towards online dqn
 DISCOUNT = .99  # Discount for target Q values
 TOTAL_STEPS = 10000000  # Upper bound on number of steps (not episodes)
-MODEL_PATH = "./RL/Models/ddqn_model_testharness"  # Where to save the model
-SAVED_MODEL_PATH = "./RL/Models/ddqn_model_testharness" # Where to back up models
-SUMMARY_PATH = "./ddqn_summaries/{ddqn_model_testharness}"
+MODEL_PATH = "./RL/Models/ddqn_model_testharness_multi_eval"  # Where to save the model
+ORIG_MODEL_PATH ="./RL/Models/ddqn_model_testharness_multi_eval"
+#ORIG_MODEL_PATH = "./RL/Models/ddqn_model_testharness_multi"
+SAVED_MODEL_PATH = "./RL/Models/ddqn_model_testharness_multi_eval" # Where to back up models
+SUMMARY_PATH = "./ddqn_summaries/{ddqn_model_testharness_multi_eval_"
 OUT_SIZE = 512  # Size of conv4 that will be splitted to a and v
 UPDATE_RATE = 0.001  # Update target q network towards online with this rate
 EXP_BUFFER_MAX_SIZE = 1000000
 
 OFFSET = 0
-TOTAL_ACTIONS = 92
+TOTAL_ACTIONS = 50 # 0=10, 50=60
 
 class StateMaker():
     def __init__(self):
@@ -98,19 +104,10 @@ class StateMaker():
     def make(self, sess, state):
         return sess.run(self.output, {self.input_state: state})
 
+    
 
-class ExperienceReplay():
-    def __init__(self, memory_size=EXP_BUFFER_MAX_SIZE):
-        self.memory = []
-        self.memory_size = memory_size
 
-    # Adds observations to memory
-    def remember(self, observation):
-        self.memory.extend(observation)
 
-    # Randomly samples memory
-    def sample(self, sample_size):
-        return np.reshape(random.sample(self.memory, sample_size), [sample_size, 5]) # s,a,r,s',d
 
 
 class SummaryStorage():
@@ -137,7 +134,7 @@ def updateTarget(parameters, sess):
         sess.run(p)
 
 class DDQN():
-    # Model of our agent, follows the original DQN + dueling + double
+    # Model of our `age`nt, follows the original DQN + dueling + double
     # defined in the Nature paper and other Google DeepMind papers
     # Note: out_size here is the size of the last conv layer output
     #
@@ -212,487 +209,604 @@ class DDQN():
 class ClientRLAgent(Thread):
     def __init__(self):
         # Wrapper of the communicating messages
-        with open('../client/server_client_config.json', 'r') as config:
+        with open('./src/client/server_client_config.json', 'r') as config:
             sc_json_config = json.load(config)
         self.ar = AgentClient(**sc_json_config[0])
         try:
             self.ar.connect_to_server()
         except socket.error as e:
             print("Error in client-server communication: " + str(e))
-        self.current_level = 0
+        self.level_count = 0
         self.failed_counter = 0
         self.solved = []
         self.tp = SimpleTrajectoryPlanner()
         self.sling_center = None
+        self.sling_mbr = None
         self.id = 28888
         self.first_shot = True
         self.prev_target = None
 
-        f = open('./ColorMap.json', 'r')
-        result = json.load(f)
-        self.look_up_matrix = np.zeros((len(result), 256))
-        self.look_up_obj_type = np.zeros(len(result)).astype(str)
-
-        obj_number = 0
-        for d in result:
-
-            if 'effects_21' in d['type']:
-                obj_name = 'Platform'
-
-            elif 'effects_34' in d['type']:
-                obj_name = 'TNT'
-
-            elif 'ice' in d['type']:
-                obj_name = 'Ice'
-
-            elif 'wood' in d['type']:
-                obj_name = 'Wood'
-
-            elif 'stone' in d['type']:
-                obj_name = 'Stone'
-
-            else:
-                obj_name = d['type'][:-2]
-
-            obj_color_map = d['colormap']
-
-            self.look_up_obj_type[obj_number] = obj_name
-            for pair in obj_color_map:
-                self.look_up_matrix[obj_number][int(pair['x'])] = pair['y']
-
-            obj_number += 1
-
-        # normalise the look_up_matrix
-        self.look_up_matrix = self.look_up_matrix / np.sqrt((self.look_up_matrix ** 2).sum(1)).reshape(-1, 1)
+        self.model = np.loadtxt("model", delimiter=",")
+        self.target_class = list(map(lambda x: x.replace("\n", ""), open('target_class').readlines()))
 
     def get_slingshot_center(self):
         try:
             ground_truth = self.ar.get_ground_truth_without_screenshot()
-            ground_truth_reader = GroundTruthReader(ground_truth, self.look_up_matrix, self.look_up_obj_type)
+            ground_truth_reader = GroundTruthReader(ground_truth, self.model, self.target_class)
             sling = ground_truth_reader.find_slingshot_mbr()[0]
             sling.width, sling.height = sling.height, sling.width
             self.sling_center = self.tp.get_reference_point(sling)
+            self.sling_mbr = sling
 
         except NotVaildStateError:
             self.ar.fully_zoom_out()
             ground_truth = self.ar.get_ground_truth_without_screenshot()
-            ground_truth_reader = GroundTruthReader(ground_truth, self.look_up_matrix, self.look_up_obj_type)
+            ground_truth_reader = GroundTruthReader(ground_truth, self.model, self.target_class)
             sling = ground_truth_reader.find_slingshot_mbr()[0]
             sling.width, sling.height = sling.height, sling.width
             self.sling_center = self.tp.get_reference_point(sling)
+            self.sling_mbr = sling
 
     def update_no_of_levels(self):
         # check the number of levels in the game
-        levels = self.ar.get_number_of_levels()
+        n_levels = self.ar.get_number_of_levels()
 
         # if number of levels has changed make adjustments to the solved array
-        if levels > len(self.solved):
-            for n in range(len(self.solved), levels):
+        if n_levels > len(self.solved):
+            for n in range(len(self.solved), n_levels):
                 self.solved.append(0)
 
-        if levels < len(self.solved):
-            self.solved = self.solved[:levels]
+        if n_levels < len(self.solved):
+            self.solved = self.solved[:n_levels]
 
-        print('No of Levels: ' + str(levels))
+        # self.logger.info('No of Levels: ' + str(n_levels))
 
-    def get_next_level(self):
-        level = (self.current_level + 1) % len(self.solved)
-        if level == 0:
-            level = len(self.solved)
-        return level
+        return n_levels
 
     def check_my_score(self):
         """
          * Run the Client (Naive Agent)
         *"""
-        # scores = self.ar.get_all_level_scores()
-        # print(" My score: ")
-        # level = 1
-        # for i in scores:
-        #     print(" level ", level, "  ", i)
-        #     if i > 0:
-        #         self.solved[level - 1] = 1
-        #     level += 1
+        scores = self.ar.get_all_level_scores()
+        #print(" My score: ")
+        level = 1
+        for i in scores:
+            self.logger.info(" level ", level, "  ", i)
+            if i > 0:
+                self.solved[level - 1] = 1
+            level += 1
+        return scores
 
+class ExperienceReplay():
+    def __init__(self, memory_size=10000000):
+        self.memory = []
+        self.memory_size = memory_size
 
-while True:
-    try:
+    # Adds observations to memory
+    def remember(self, observation):
+        if(len(self.memory) > 18000):
+            del self.memory[0:1000]
+        self.memory.extend(observation)
 
-        rl_client = ClientRLAgent()
+    # Randomly samples memory
+    def sample(self, sample_size):
+        return np.reshape(random.sample(self.memory, sample_size), [sample_size, 5]) # s,a,r,s',d
 
-        # Properties
-        tf.reset_default_graph()
-        online_QN = DDQN(OUT_SIZE)
-        target_QN = DDQN(OUT_SIZE)
-        init = tf.global_variables_initializer()
-        saver = tf.train.Saver()
-        trainable_variables = tf.trainable_variables()
-        targetParams = updateTargetTF(trainable_variables, UPDATE_RATE)
-        memory = ExperienceReplay()
+class MultiDQN():
 
-        # Where we save our checkpoints and graphs
-        summary_dir = os.path.abspath(SUMMARY_PATH)
-        summary_writer = SummaryStorage(scope="summary", dir=summary_dir)
-        epsilon = START_EPSILON
-        decay_step = (START_EPSILON - END_EPSILON) / DECAY_STEPS
-        state_maker = StateMaker()
+    def __init__(self):
+        # TRAINING/ EVALUATION SWITCH Parameters
+        self.IS_IN_TRAINING_MODE = True  # indicates if the agent is in training mode, switching it off will stop agent from training
+        self.EXPLORATION_EPSILON_BEFORE_EVAL = 0.13  # just needed to preserve exploration after evaluation is done
+        self.EVAL_LEVELS_NUMBER = 51  # total number of eval levels
+        self.TRAIN_LEVELS_NUMBER = 1501  # total number of train levels
+        self.TRAINING_SCORES = np.zeros([self.TRAIN_LEVELS_NUMBER,
+                                    3])  # 300 training levels, for each level we have: level score, Won or Not?, Num of birds used
+        self.EVAL_SCORES = np.zeros([self.EVAL_LEVELS_NUMBER,
+                                3])  # 50 evaluation levels, for each level we have: level score, Won or Not?, Num of birds used
+        # TRAINING_SET_TIMES = 0 # num of times all train levels were played
+        # EVAL_SET_TIMES = -1 # num of times all eval levels were played
 
-        highest_total_score_TRAIN = 0
-        highest_total_score_EVAL = 0
+    def reset_agent(self, sess, saver, memory, my_multiid):
+        print("Reseting agent")
+        if (len(os.listdir(ORIG_MODEL_PATH + "_" + str(my_multiid))) > 0):
+            print('Loading Model...')
+            checkpoint = tf.train.get_checkpoint_state(ORIG_MODEL_PATH + "_" + str(my_multiid))
+            saver.restore(sess, checkpoint.model_checkpoint_path)
+        memory.memory = []
+        self.IS_IN_TRAINING_MODE = True  # indicates if the agent is in training mode, switching it off will stop agent from training
+        self.EXPLORATION_EPSILON_BEFORE_EVAL = 0.13  # just needed to preserve exploration after evaluation is done
 
-        if not os.path.exists(MODEL_PATH):
-            os.makedirs(MODEL_PATH)
+    def run(self, my_multiid):
+        try:
 
-        with tf.Session() as sess:
-            sess.run(init)
+            rl_client = ClientRLAgent()
+            memory = ExperienceReplay()
+            # Properties
+            tf.reset_default_graph()
+            online_QN = DDQN(OUT_SIZE)
+            target_QN = DDQN(OUT_SIZE)
+            init = tf.global_variables_initializer()
+            saver = tf.train.Saver()
+            trainable_variables = tf.trainable_variables()
+            targetParams = updateTargetTF(trainable_variables, UPDATE_RATE)
 
-            if (len(os.listdir(MODEL_PATH)) > 0):
-                print('Loading Model...')
-                checkpoint = tf.train.get_checkpoint_state(MODEL_PATH)
-                saver.restore(sess, checkpoint.model_checkpoint_path)
+            # Where we save our checkpoints and graphs
+            summary_dir = os.path.abspath(SUMMARY_PATH + "_" + str(my_multiid) + "}")
+            summary_writer = SummaryStorage(scope="summary", dir=summary_dir)
 
-            # Run loop
-            info = rl_client.ar.configure(rl_client.id)
-            rl_client.ar.set_game_simulation_speed(100)
-            rl_client.solved = [0 for x in range(rl_client.ar.get_number_of_levels())]
-            scores = rl_client.ar.get_all_level_scores()
+            epsilon = START_EPSILON
+            decay_step = (START_EPSILON - END_EPSILON) / DECAY_STEPS
+            state_maker = StateMaker()
 
-            max_scores = np.zeros([len(rl_client.solved)])
+            highest_total_score_TRAIN = 0
+            highest_total_score_EVAL = 0
 
-            rl_client.current_level = rl_client.get_next_level()
-            rl_client.ar.load_level(rl_client.current_level)
+            if not os.path.exists(MODEL_PATH + "_" + str(my_multiid)):
+                os.makedirs(MODEL_PATH + "_" + str(my_multiid))
 
-            s = 'None'
-            s_previous = 'None'
-            r_previous = 0
-            a_previous = 0
-            r_average = 0
-            r_total = 0
-            r = 0
-            all_levels_played_count = 0
-            d = False
+            with tf.Session() as sess:
+                sess.run(init)
 
-            first_time_in_level_in_episode = True
+                if os.path.exists(ORIG_MODEL_PATH + "_" + str(my_multiid)):
+                    if (len(os.listdir(ORIG_MODEL_PATH + "_" + str(my_multiid))) > 0):
+                        print('Loading Model...')
+                        checkpoint = tf.train.get_checkpoint_state(ORIG_MODEL_PATH + "_" + str(my_multiid))
+                        saver.restore(sess, checkpoint.model_checkpoint_path)
 
-            for env_step in range(1, TOTAL_STEPS):
-                game_state = rl_client.ar.get_game_state()
-                r = rl_client.ar.get_current_score()
-                print("REWARD: " + str(r))
+                # Run loop
+                info = rl_client.ar.configure(rl_client.id)
+                rl_client.ar.set_game_simulation_speed(100)
+                rl_client.solved = [0 for x in range(rl_client.ar.get_number_of_levels())]
+                scores = rl_client.ar.get_all_level_scores()
 
+                max_scores = np.zeros([len(rl_client.solved)])
 
-                if game_state == GameState.REQUESTNOVELTYLIKELIHOOD:
-                    # Require report novelty likelihood and then playing can be resumed
-                    # dummy likelihoods:
-                    print("REQUESTNOVELTYLIKELIHOOD")
-                    novelty_likelihood = 0.9
-                    non_novelty_likelihood = 0.1
-                    rl_client.ar.report_novelty_likelihood(novelty_likelihood, non_novelty_likelihood)
-                elif game_state == GameState.NEWTRIAL:
-                    print("NEWTRIAL")
-                    # Make a fresh agent to continue with a new trial (evaluation)
-                    (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set) = rl_client.ar.ready_for_new_set()
-                elif game_state == GameState.NEWTESTSET:
-                    # DO something to clone a test only agent that does not learn
-                    print("NEWTESTSET")
-                    IS_IN_TRAINING_MODE = False
-                    (time_limit, interaction_limit, n_levels, attempts_per_level, mode,
-                     seq_or_set, allowNoveltyInfo) = rl_client.ar.ready_for_new_set()
-                    #rl_client.ar.ready_for_new_set()
-                elif game_state == GameState.NEWTRAININGSET:
-                    # DO something to resume the training agent
-                    print("NEWTRAININGSET")
-                    IS_IN_TRAINING_MODE = True
-                    (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set) = rl_client.ar.ready_for_new_set()
-                    #rl_client.ar.ready_for_new_set()
-                elif game_state == GameState.RESUMETRAINING:
-                    print("RESUMETRAINING")
-                    IS_IN_TRAINING_MODE = True
-                    (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set) = rl_client.ar.ready_for_new_set()
-                elif game_state == GameState.EVALUATION_TERMINATED:
-                    print("EVALUATION_TERMINATED")
-                    # store info and disconnect the agent as the evaluation is finished
-                    print("Done evaluating")
-                    exit(1)
-                    pass
+                rl_client.ar.load_next_available_level()
+                rl_client.level_count += 1
 
+                s = 'None'
+                s_previous = 'None'
+                r_previous = 0
+                a_previous = 0
+                r_average = 0
+                r_total = 0
+                r = 0
+                all_levels_played_count = 0
+                d = False
 
-                if (IS_IN_TRAINING_MODE == True and (game_state == GameState.NEWTRAININGSET or game_state == GameState.RESUMETRAINING)):
-                    # Training
-                    EVAL_SET_TIMES += 1
-                    if (highest_total_score_EVAL < EVAL_SCORES[:, 0].sum(0)):
-                        highest_total_score_EVAL = EVAL_SCORES[:, 0].sum(0)
-                    print("Training mode... interactions so far: " + str(
-                        env_step) + " current total score of evaluation set: " + str(EVAL_SCORES[:, 0].sum(0)) +
-                          " highest ever total score: " + str(highest_total_score_EVAL))
+                first_time_in_level_in_episode = True
 
-                    # Start exploring
-                    epsilon = EXPLORATION_EPSILON_BEFORE_EVAL
+                for env_step in range(1, TOTAL_STEPS):
+                    game_state = rl_client.ar.get_game_state()
+                    r = rl_client.ar.get_current_score()
+                    print("REWARD: " + str(r))
 
-                    # Write training results to tensorboard
-                    episode_summary = tf.Summary()
-                    episode_summary.value.add(simple_value=EVAL_SCORES[:, 0].sum(0), tag="eval_total_reward")
-                    episode_summary.value.add(simple_value=EVAL_SCORES[:, 1].sum(0), tag="eval_total_solved")
-                    episode_summary.value.add(simple_value=highest_total_score_EVAL, tag="eval_highest_ever_total_score")
-                    summary_writer.summary_writer.add_summary(episode_summary, OFFSET + env_step)
-                    summary_writer.summary_writer.flush()
-
-                    s = "None"
-                    s_previous = "None"
-                    r_previous = 0
-                    a_previous = 0
-                    r_total = 0
-                    EVAL_SCORES = np.zeros([EVAL_LEVELS_NUMBER, 3])
-
-                    #rl_client.ar.restart_level()
-
-                if (IS_IN_TRAINING_MODE == False and game_state == GameState.NEWTESTSET):
-                    # EVALUATION
-                    TRAINING_SET_TIMES += 1
-                    if(highest_total_score_TRAIN < TRAINING_SCORES[:, 0].sum(0)):
-                        highest_total_score_TRAIN = TRAINING_SCORES[:, 0].sum(0)
-                    print("Evaluating Agent... interactions so far: " + str(
-                        env_step) + " current total score of training set: " + str(TRAINING_SCORES[:, 0].sum(0)) +
-                          " highest ever total score: " + str(highest_total_score_TRAIN))
-
-                    # Stop exploring
-                    EXPLORATION_EPSILON_BEFORE_EVAL = epsilon
-                    epsilon = 0.00001
-
-                    # Write training results to tensorboard
-                    episode_summary = tf.Summary()
-                    episode_summary.value.add(simple_value=TRAINING_SCORES[:, 0].sum(0), tag="train_total_reward")
-                    episode_summary.value.add(simple_value=TRAINING_SCORES[:, 1].sum(0), tag="train_total_solved")
-                    episode_summary.value.add(simple_value=highest_total_score_TRAIN, tag="train_highest_ever_total_score")
-                    summary_writer.summary_writer.add_summary(episode_summary, OFFSET + env_step)
-                    summary_writer.summary_writer.flush()
-
-                    s = "None"
-                    s_previous = "None"
-                    r_previous = 0
-                    a_previous = 0
-                    r_total = 0
-                    TRAINING_SCORES = np.zeros([TRAIN_LEVELS_NUMBER, 3])
-
-
-                if(s != 'None' and (game_state == GameState.PLAYING or game_state == GameState.WON or game_state == GameState.LOST)):
-                    # save previous state
-                    s_previous = s
-                    r_previous = r
-                    a_previous = a
-
-
-                # First check if we are in the won or lost state
-                # to adjust the reward and done flag if needed
-                if game_state == GameState.WON:
-                    print("WON")
-                    # save current state before reloading the level
-                    #r = rl_client.ar.get_current_score()
-                    s = rl_client.ar.do_screenshot()
-                    s = state_maker.make(sess, s)
-
-                    if (IS_IN_TRAINING_MODE == True):
-                        TRAINING_SCORES[rl_client.current_level, :] = [rl_client.ar.get_current_score(), 1, OFFSET+ env_step]
-                    else:
-                        EVAL_SCORES[rl_client.current_level, :] = [rl_client.ar.get_current_score(), 1, OFFSET + env_step]
-
-                    rl_client.update_no_of_levels()
-                    scores = rl_client.ar.get_all_level_scores()
-
-                    rl_client.check_my_score()
-                    rl_client.current_level = rl_client.get_next_level()
-                    rl_client.ar.load_level(rl_client.current_level)
-
-                    # Update reward and done
-                    d = 1
-                    r_previous *= 1
-                    r_total += r_previous
-                    first_time_in_level_in_episode = True
-
-
-                elif game_state == GameState.LOST:
-                    print("LOST")
-                    # save current state before reloading the level
-                    #r = rl_client.ar.get_current_score()
-                    s = rl_client.ar.do_screenshot()
-                    s = state_maker.make(sess, s)
-
-                    # check for change of number of levels in the game
-                    rl_client.update_no_of_levels()
-                    rl_client.check_my_score()
-
-                    if (IS_IN_TRAINING_MODE == True):
-                        TRAINING_SCORES[rl_client.current_level, :] = [rl_client.ar.get_current_score(), 0,  OFFSET+ env_step]
-                    else:
-                        EVAL_SCORES[rl_client.current_level, :] = [rl_client.ar.get_current_score(), 0, OFFSET+ env_step]
-
-                    # If lost, then restart the level
-                    rl_client.failed_counter += 1
-                    if rl_client.failed_counter >= 0:  # for testing , go directly to the next level
-
-                        rl_client.failed_counter = 0
-                        rl_client.current_level = rl_client.get_next_level()
-                        rl_client.ar.load_level(rl_client.current_level)
-
-
-                    else:
-                        print("restart")
-                        rl_client.ar.restart_level()
-
-                    # Update reward and done
-                    d = 1
-                    r_previous *= -1
-                    first_time_in_level_in_episode = True
-
-
-                if(game_state == GameState.PLAYING):
-                    # Start of the episode
-                    print("PLAYING")
-                    #r = rl_client.ar.get_current_score()
-
-                    # rl_client.get_slingshot_center()
-                    # game_state = rl_client.ar.get_game_state()
-                    #
-                    # s, img = rl_client.ar.get_ground_truth_with_screenshot()
-
-                    if (first_time_in_level_in_episode):
-                        # If first time in level reset states so we dont
-                        # carry previous states with us
+                    if game_state == GameState.REQUESTNOVELTYLIKELIHOOD:
+                        # Require report novelty likelihood and then playing can be resumed
+                        # dummy likelihoods:
+                        print("REQUESTNOVELTYLIKELIHOOD")
+                        novelty_likelihood = 0.9
+                        non_novelty_likelihood = 0.1
+                        novel_obj_ids = {1, -2, -398879789}
+                        novelty_level = 0
+                        novelty_description = ""
+                        rl_client.ar.report_novelty_likelihood(novelty_likelihood, non_novelty_likelihood, novel_obj_ids,
+                                                          novelty_level, novelty_description)
+                    elif game_state == GameState.NEWTRIAL:
+                        print("NEWTRIAL")
+                        # Make a fresh agent to continue with a new trial (evaluation)
+                        self.reset_agent(sess, saver, memory, my_multiid)
                         s = 'None'
                         s_previous = 'None'
-                        rl_client.ar.fully_zoom_out()  # Needed as we depend on fully zoom out values
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        rl_client.ar.fully_zoom_out()
-                        first_time_in_level_in_episode = False
-
-                    rl_client.get_slingshot_center()
-
-                    s, img = rl_client.ar.get_ground_truth_with_screenshot()
-                    s = state_maker.make(sess, s)
-
-                    # Greedy choice
-                    if np.random.rand(1) < epsilon:
-                        # Explore
-                        a = np.random.randint(0, 91)
-                        loss = 'None'
-                        predicted_q_values = 'None'
-                    else:
-                        # Exploit
-                        best_a = sess.run(online_QN.best_q, feed_dict={online_QN.imageIn: [s]})
-                        a = best_a
-
-                    # Convert simulator coordinates to pixels...
-                    tap_time = int(random.randint(65, 100))
-                    ax_pixels = -int(40 * math.cos(math.radians(a)))
-                    ay_pixels = int(40 * math.sin(math.radians(a)))
-
-                    print("Shoot: " + str(ax_pixels) + ", " + str(ay_pixels) + ", " + str(tap_time))
-                    # Execute a in the environment
-                    rl_client.ar.shoot(int(rl_client.sling_center.X), int(rl_client.sling_center.Y), ax_pixels,
-                                       ay_pixels, 0, tap_time, False)
-
-                elif game_state == GameState.LEVEL_SELECTION:
-                    print("unexpected level selection page, go to the last current level : ", rl_client.current_level)
-                    rl_client.ar.load_level(rl_client.current_level)
-
-                elif game_state == GameState.MAIN_MENU:
-                    print("unexpected main menu page, reload the level : ", rl_client.current_level)
-                    rl_client.ar.load_level(rl_client.current_level)
-                    #time.sleep(10)
-
-                elif game_state == GameState.EPISODE_MENU:
-                    print("unexpected episode menu page, reload the level: ", rl_client.current_level)
-                    rl_client.ar.load_level(rl_client.current_level)
-
-
-                if(IS_IN_TRAINING_MODE == True and (game_state == GameState.PLAYING or game_state == GameState.WON or game_state == GameState.LOST)):
-                    if(d and game_state == GameState.WON):
-                        r_previous = 1
-                    elif(d and game_state == GameState.LOST):
                         r_previous = 0
-                    else:
+                        a_previous = 0
+                        r_average = 0
+                        r_total = 0
+                        r = 0
+                        all_levels_played_count = 0
+                        d = False
+
+                        first_time_in_level_in_episode = True
+                        (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set,
+                         allowNoveltyInfo) = rl_client.ar.ready_for_new_set()
+                    elif game_state == GameState.NEWTESTSET:
+                        # DO something to clone a test only agent that does not learn
+                        print("NEWTESTSET")
+                        self.reset_agent(sess, saver, memory, my_multiid)
+                        s = 'None'
+                        s_previous = 'None'
                         r_previous = 0
+                        a_previous = 0
+                        r_average = 0
+                        r_total = 0
+                        r = 0
+                        all_levels_played_count = 0
+                        d = False
 
-                    if(s_previous != 'None'):
-                        memory.remember(np.reshape(np.array([s_previous, a_previous, r_previous, s, d]),
-                                                   [1, 5]))  # Save observation to memory
+                        first_time_in_level_in_episode = True
+                        self.IS_IN_TRAINING_MODE = False
+                        (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set,
+                         allowNoveltyInfo) = rl_client.ar.ready_for_new_set()
+                        # rl_client.ar.ready_for_new_set()
+                    elif game_state == GameState.NEWTRAININGSET:
+                        # DO something to resume the training agent
+                        print("NEWTRAININGSET")
+                        self.reset_agent(sess, saver, memory, my_multiid)
+                        s = 'None'
+                        s_previous = 'None'
+                        r_previous = 0
+                        a_previous = 0
+                        r_average = 0
+                        r_total = 0
+                        r = 0
+                        all_levels_played_count = 0
+                        d = False
 
-                    # Decay epsilon
-                    if epsilon > END_EPSILON:
-                        epsilon -= decay_step
+                        first_time_in_level_in_episode = True
+                        self.IS_IN_TRAINING_MODE = True
+                        (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set,
+                         allowNoveltyInfo) = rl_client.ar.ready_for_new_set()
+                        # rl_client.ar.ready_for_new_set()
+                    elif game_state == GameState.RESUMETRAINING:
+                        print("RESUMETRAINING")
+                        self.reset_agent(sess, saver, memory, my_multiid)
+                        s = 'None'
+                        s_previous = 'None'
+                        r_previous = 0
+                        a_previous = 0
+                        r_average = 0
+                        r_total = 0
+                        r = 0
+                        all_levels_played_count = 0
+                        d = False
 
-                    if ((env_step % UPDATE_FREQUENCY) == 0) and len(memory.memory) > BATCH_SIZE:
-                        train_batch = memory.sample(BATCH_SIZE)
+                        first_time_in_level_in_episode = True
+                        self.IS_IN_TRAINING_MODE = True
+                        (time_limit, interaction_limit, n_levels, attempts_per_level, mode, seq_or_set,
+                         allowNoveltyInfo) = rl_client.ar.ready_for_new_set()
+                    elif game_state == GameState.EVALUATION_TERMINATED:
+                        print("EVALUATION_TERMINATED")
+                        # store info and disconnect the agent as the evaluation is finished
+                        print("Done evaluating")
+                        exit(1)
+                        pass
 
-                        # Double DQN update to target network ----------
-                        # More info on update here: https://arxiv.org/pdf/1509.06461.pdf
-                        # "Deep RL with Double Q-Learning"
+                    if (self.IS_IN_TRAINING_MODE == True and (
+                            game_state == GameState.NEWTRAININGSET or game_state == GameState.RESUMETRAINING)):
+                        # Training
+                        #EVAL_SET_TIMES += 1
+                        if (highest_total_score_EVAL < self.EVAL_SCORES[:, 0].sum(0)):
+                            highest_total_score_EVAL = self.EVAL_SCORES[:, 0].sum(0)
+                        print("Training mode... interactions so far: " + str(
+                            env_step) + " current total score of evaluation set: " + str(self.EVAL_SCORES[:, 0].sum(0)) +
+                              " highest ever total score: " + str(highest_total_score_EVAL) + " agent id: " +str(my_multiid))
 
-                        # Feed next state to online qn
-                        Q_online_best = sess.run(online_QN.best_q,
-                                                 feed_dict={
-                                                     online_QN.imageIn: np.reshape(np.vstack(train_batch[:, 3]),
-                                                                                   [-1, 84, 84, 3])})
+                        # Start exploring
+                        epsilon = self.EXPLORATION_EPSILON_BEFORE_EVAL
 
-                        # Feed next state to offline qn
-                        Q_offline = sess.run(target_QN.q_values,
-                                             feed_dict={target_QN.imageIn: np.reshape(np.vstack(train_batch[:, 3]),
-                                                                                      [-1, 84, 84, 3])})
-
-                        # is end? 0 : 1
-                        was_end = -(train_batch[:, 4] - 1)
-
-                        # Evaluate decision of online network using offline network. ----
-                        # Double Q learning update: y = R_t+1 + discount * Q(S_t+1, argmax Q(S_t+1,a,online_params), offline_params)
-
-                        # Get Q(S_t+1, argmax Q(S_t+1,a,online_params), offline_params),
-                        # by selecting the best q values predicted by online network from offline network
-                        double_Q = Q_offline[range(BATCH_SIZE), Q_online_best]
-
-                        # Update target qs with train batch rewards + discounted target QN q values
-                        target_Q = train_batch[:, 2] + (DISCOUNT * double_Q * was_end)
-
-                        # Feed train batch, update the online network with target q
-                        _, summaries = sess.run([online_QN.optimized, online_QN.summaries],
-                                                feed_dict={
-                                                    online_QN.imageIn: np.reshape(np.vstack(train_batch[:, 0]),
-                                                                                  [-1, 84, 84, 3]),
-                                                    online_QN.target_q: target_Q,
-                                                    online_QN.actions: train_batch[:, 1]})
-                        summary_writer.summary_writer.add_summary(summaries, OFFSET + env_step)
-
-                        updateTarget(targetParams, sess)  # Update the target qn to online qn with some update rate
-
-                        # Store the summaries
+                        # Write training results to tensorboard
                         episode_summary = tf.Summary()
-                        episode_summary.value.add(simple_value=r, tag="reward")
-                        episode_summary.value.add(simple_value=a, tag="action_xy")
-                        episode_summary.value.add(simple_value=tap_time, tag="tap_time")
-                        episode_summary.value.add(simple_value=epsilon, tag="epsilon")
-                        if (rl_client.current_level == len(rl_client.solved) - 1):
-                            # Store the summaries
-                            # if(all_levels_played_count == 3):
-                            episode_summary.value.add(simple_value=r_total, tag="reward_total")
-                            print("Total score over levels: " + str(r_total))
-                            r_total = 0
-                            all_levels_played_count += 1
+                        episode_summary.value.add(simple_value=self.EVAL_SCORES[:, 0].sum(0), tag="eval_total_reward")
+                        episode_summary.value.add(simple_value=self.EVAL_SCORES[:, 1].sum(0), tag="eval_total_solved")
+                        episode_summary.value.add(simple_value=highest_total_score_EVAL,
+                                                  tag="eval_highest_ever_total_score")
                         summary_writer.summary_writer.add_summary(episode_summary, OFFSET + env_step)
-
                         summary_writer.summary_writer.flush()
 
-                        # Save the model every 10 steps
-                        saver.save(sess, MODEL_PATH + '/model-' + str(OFFSET + env_step) + '.ckpt')
-                        print("Saved Model")
+                        s = "None"
+                        s_previous = "None"
+                        r_previous = 0
+                        a_previous = 0
+                        r_total = 0
+                        self.EVAL_SCORES = np.zeros([self.EVAL_LEVELS_NUMBER, 3])
+
+                        # rl_client.ar.restart_level()
+
+                    if (self.IS_IN_TRAINING_MODE == False and game_state == GameState.NEWTESTSET):
+                        # EVALUATION
+                        #TRAINING_SET_TIMES += 1
+                        if (highest_total_score_TRAIN < self.TRAINING_SCORES[:, 0].sum(0)):
+                            highest_total_score_TRAIN = self.TRAINING_SCORES[:, 0].sum(0)
+                        print("Evaluating Agent... interactions so far: " + str(
+                            env_step) + " current total score of training set: " + str(self.TRAINING_SCORES[:, 0].sum(0)) +
+                              " highest ever total score: " + str(highest_total_score_TRAIN) + " agent id: " +str(my_multiid))
+
+                        # Stop exploring
+                        self.EXPLORATION_EPSILON_BEFORE_EVAL = epsilon
+                        epsilon = 0.00001
+
+                        # Write training results to tensorboard
+                        episode_summary = tf.Summary()
+                        episode_summary.value.add(simple_value=self.TRAINING_SCORES[:, 0].sum(0), tag="train_total_reward")
+                        episode_summary.value.add(simple_value=self.TRAINING_SCORES[:, 1].sum(0), tag="train_total_solved")
+                        episode_summary.value.add(simple_value=highest_total_score_TRAIN,
+                                                  tag="train_highest_ever_total_score")
+                        summary_writer.summary_writer.add_summary(episode_summary, OFFSET + env_step)
+                        summary_writer.summary_writer.flush()
+
+                        s = "None"
+                        s_previous = "None"
+                        r_previous = 0
+                        a_previous = 0
+                        r_total = 0
+                        self.TRAINING_SCORES = np.zeros([self.TRAIN_LEVELS_NUMBER, 3])
+
+                    if (s != 'None' and (
+                            game_state == GameState.PLAYING or game_state == GameState.WON or game_state == GameState.LOST)):
+                        # save previous state
+                        s_previous = s
+                        r_previous = r
+                        a_previous = a
+
+                    # First check if we are in the won or lost state
+                    # to adjust the reward and done flag if needed
+                    if game_state == GameState.WON:
+                        print("WON")
+                        self.shoots_before_level_is_completed = 0
+                        # save current state before reloading the level
+                        # r = rl_client.ar.get_current_score()
+                        s = rl_client.ar.do_screenshot()
+                        s = state_maker.make(sess, s)
+
+                        if (self.IS_IN_TRAINING_MODE == True):
+                            self.TRAINING_SCORES[rl_client.level_count, :] = [rl_client.ar.get_current_score(), 1,
+                                                                           OFFSET + env_step]
+                        else:
+                            self.EVAL_SCORES[rl_client.level_count, :] = [rl_client.ar.get_current_score(), 1,
+                                                                       OFFSET + env_step]
+
+                        rl_client.update_no_of_levels()
+                        scores = rl_client.ar.get_all_level_scores()
+
+                        rl_client.check_my_score()
+                        rl_client.ar.load_next_available_level()
+                        rl_client.level_count += 1
+
+                        # Update reward and done
+                        d = 1
+                        r_previous *= 1
+                        r_total += r_previous
+                        first_time_in_level_in_episode = True
+
+
+                    elif game_state == GameState.LOST:
+                        print("LOST")
+                        self.shoots_before_level_is_completed = 0
+                        # save current state before reloading the level
+                        # r = rl_client.ar.get_current_score()
+                        s = rl_client.ar.do_screenshot()
+                        s = state_maker.make(sess, s)
+
+                        # check for change of number of levels in the game
+                        rl_client.update_no_of_levels()
+                        rl_client.check_my_score()
+
+                        if (self.IS_IN_TRAINING_MODE == True):
+                            self.TRAINING_SCORES[rl_client.level_count, :] = [rl_client.ar.get_current_score(), 0,
+                                                                           OFFSET + env_step]
+                        else:
+                            self.EVAL_SCORES[rl_client.level_count, :] = [rl_client.ar.get_current_score(), 0,
+                                                                       OFFSET + env_step]
+
+                        # If lost, then restart the level
+                        rl_client.failed_counter += 1
+                        if rl_client.failed_counter >= 0:  # for testing , go directly to the next level
+
+                            rl_client.failed_counter = 0
+                            rl_client.ar.load_next_available_level()
+                            rl_client.level_count += 1
+
+
+                        else:
+                            #print("restart")
+                            rl_client.ar.restart_level()
+
+                        # Update reward and done
+                        d = 1
+                        r_previous *= -1
+                        first_time_in_level_in_episode = True
+
+                    if (game_state == GameState.PLAYING):
+                        # Start of the episode
+                        #print("PLAYING")
+                        # r = rl_client.ar.get_current_score()
+
+                        # rl_client.get_slingshot_center()
+                        # game_state = rl_client.ar.get_game_state()
+                        #
+                        # s, img = rl_client.ar.get_ground_truth_with_screenshot()
+
+                        if (first_time_in_level_in_episode):
+                            # If first time in level reset states so we dont
+                            # carry previous states with us
+                            s = 'None'
+                            s_previous = 'None'
+                            rl_client.ar.fully_zoom_out()  # Needed as we depend on fully zoom out values
+                            rl_client.ar.fully_zoom_out()
+                            rl_client.ar.fully_zoom_out()
+                            rl_client.ar.fully_zoom_out()
+                            rl_client.ar.fully_zoom_out()
+                            rl_client.ar.fully_zoom_out()
+                            rl_client.ar.fully_zoom_out()
+                            first_time_in_level_in_episode = False
+
+                        rl_client.get_slingshot_center()
+
+                        s, img = rl_client.ar.get_ground_truth_with_screenshot()
+                        # start = time.time()
+                        #
+                        # end = time.time()
+                        # print("gt with screenshot: " + str(end - start))
+                        #
+                        # start = time.time()
+                        # t1 = rl_client.ar.get_ground_truth_without_screenshot()
+                        # end = time.time()
+                        # print("gt without screenshot: " + str(end - start))
+                        #
+                        # start = time.time()
+                        # t1, t2 = rl_client.ar.get_noisy_ground_truth_with_screenshot()
+                        # end = time.time()
+                        # print("noisy gt with screenshot: " + str(end - start))
+                        #
+                        # start = time.time()
+                        # t1 = rl_client.ar.get_noisy_ground_truth_without_screenshot()
+                        # end = time.time()
+                        # print("noisy gt without screenshot: " + str(end - start))
+                        #
+                        # start = time.time()
+                        # t1 = rl_client.ar.do_screenshot()
+                        # end = time.time()
+                        # print("screenshot only: " + str(end - start))
+
+                        s = state_maker.make(sess, s)
+
+                        # Greedy choice
+                        if np.random.rand(1) < epsilon:
+                            # Explore
+                            a = np.random.randint(0, 49)
+                            loss = 'None'
+                            predicted_q_values = 'None'
+                        else:
+                            # Exploit
+                            best_a = sess.run(online_QN.best_q, feed_dict={online_QN.imageIn: [s]})
+                            a = best_a[0]
+
+                        # convert 0-50 to 10-60
+                        a += 10
+                        # Convert simulator coordinates to pixels...
+                        release_point = rl_client.tp.find_release_point(rl_client.sling_mbr, math.radians(a))
+                        tap_time = int(1250)
+
+
+                        # Execute a in the environment
+                        if(self.shoots_before_level_is_completed > 20):
+                            # 20 shots for a level... likely novelty 3 flip x, skip level
+                            print("20 shots for a level... likely novelty 3 flip x, skip level")
+                            rl_client.ar.load_next_available_level()
+                            rl_client.level_count += 1
+
+                        if not release_point:
+                            # Add logic to deal with unreachable target
+                            print("No release point is found")
+
+                            release_point = Point2D(-int(40*math.cos(math.radians(a))), int(40*math.sin(math.radians(a))))
+
+                        dx = int(release_point.X - rl_client.sling_center.X)
+                        dy = int(release_point.Y - rl_client.sling_center.Y)
+                        print("Shoot: " + str(int(rl_client.sling_center.X)) + ", " + str(int(rl_client.sling_center.Y)) + ", " + str(tap_time))
+                        rl_client.ar.shoot_and_record_ground_truth(release_point.X, release_point.Y, 0, tap_time, 1)
+                        self.shoots_before_level_is_completed += 1
+
+                    elif game_state == GameState.LEVEL_SELECTION:
+                        print("unexpected level selection page, go to the last current level")
+                        self.shoots_before_level_is_completed = 0
+                        rl_client.ar.load_next_available_level()
+                        rl_client.level_count += 1
+                        rl_client.novelty_existence = rl_client.ar.get_novelty_info()
+
+                    elif game_state == GameState.MAIN_MENU:
+                        print("unexpected main menu page, reload the level : ", rl_client.level_count)
+                        self.shoots_before_level_is_completed = 0
+                        rl_client.ar.load_next_available_level()
+                        rl_client.level_count += 1
+                        rl_client.novelty_existence = rl_client.ar.get_novelty_info()
+                        # time.sleep(10)
+
+                    elif game_state == GameState.EPISODE_MENU:
+                        print("unexpected main menu page, reload the level : ", rl_client.level_count)
+                        self.shoots_before_level_is_completed = 0
+                        rl_client.ar.load_next_available_level()
+                        rl_client.level_count += 1
+                        rl_client.novelty_existence = rl_client.ar.get_novelty_info()
+
+                    if (self.IS_IN_TRAINING_MODE == True and (
+                            game_state == GameState.PLAYING or game_state == GameState.WON or game_state == GameState.LOST)):
+                        # if (d and game_state == GameState.WON):
+                        #     r_previous = 1
+                        # elif (d and game_state == GameState.LOST):
+                        #     r_previous = 0
+                        # else:
+                        #     r_previous = 0
+                        r_previous = r_previous / 150000
+
+                        if (s_previous != 'None'):
+                            memory.remember(np.reshape(np.array([s_previous, a_previous, r_previous, s, d]),
+                                                       [1, 5]))  # Save observation to memory
+
+                        # Decay epsilon
+                        if epsilon > END_EPSILON:
+                            epsilon -= decay_step
+
+                        if ((env_step % UPDATE_FREQUENCY) == 0) and len(memory.memory) > BATCH_SIZE:
+                            train_batch = memory.sample(BATCH_SIZE)
+
+                            # Double DQN update to target network ----------
+                            # More info on update here: https://arxiv.org/pdf/1509.06461.pdf
+                            # "Deep RL with Double Q-Learning"
+
+                            # Feed next state to online qn
+                            Q_online_best = sess.run(online_QN.best_q,
+                                                     feed_dict={
+                                                         online_QN.imageIn: np.reshape(np.vstack(train_batch[:, 3]),
+                                                                                       [-1, 84, 84, 3])})
+
+                            # Feed next state to offline qn
+                            Q_offline = sess.run(target_QN.q_values,
+                                                 feed_dict={target_QN.imageIn: np.reshape(np.vstack(train_batch[:, 3]),
+                                                                                          [-1, 84, 84, 3])})
+
+                            # is end? 0 : 1
+                            was_end = -(train_batch[:, 4] - 1)
+
+                            # Evaluate decision of online network using offline network. ----
+                            # Double Q learning update: y = R_t+1 + discount * Q(S_t+1, argmax Q(S_t+1,a,online_params), offline_params)
+
+                            # Get Q(S_t+1, argmax Q(S_t+1,a,online_params), offline_params),
+                            # by selecting the best q values predicted by online network from offline network
+                            double_Q = Q_offline[range(BATCH_SIZE), Q_online_best]
+
+                            # Update target qs with train batch rewards + discounted target QN q values
+                            target_Q = train_batch[:, 2] + (DISCOUNT * double_Q * was_end)
+
+                            # Feed train batch, update the online network with target q
+                            _, summaries = sess.run([online_QN.optimized, online_QN.summaries],
+                                                    feed_dict={
+                                                        online_QN.imageIn: np.reshape(np.vstack(train_batch[:, 0]),
+                                                                                      [-1, 84, 84, 3]),
+                                                        online_QN.target_q: target_Q,
+                                                        online_QN.actions: train_batch[:, 1]})
+                            summary_writer.summary_writer.add_summary(summaries, OFFSET + env_step)
+
+                            updateTarget(targetParams, sess)  # Update the target qn to online qn with some update rate
+
+                            # Store the summaries
+                            episode_summary = tf.Summary()
+                            episode_summary.value.add(simple_value=r, tag="reward")
+                            episode_summary.value.add(simple_value=a, tag="action_xy")
+                            episode_summary.value.add(simple_value=tap_time, tag="tap_time")
+                            episode_summary.value.add(simple_value=epsilon, tag="epsilon")
+                            if ((rl_client.level_count % 50) == 0):
+                                # Store the summaries
+                                # if(all_levels_played_count == 3):
+                                episode_summary.value.add(simple_value=r_total, tag="reward_total")
+                                print("Total score over levels: " + str(r_total) + " agent id: " +str(my_multiid))
+                                r_total = 0
+                                all_levels_played_count += 1
+                            summary_writer.summary_writer.add_summary(episode_summary, OFFSET + env_step)
+
+                            summary_writer.summary_writer.flush()
+
+                            # Save the model every 10 steps
+                            saver.save(sess, MODEL_PATH + "_" + str(my_multiid) + '/model-' + str(OFFSET + env_step) + '.ckpt')
+                            #print("Saved Model")
 
 
 
 
 
 
-    except Exception as e:
-        print("Error: ", e)
-    finally:
-        time.sleep(10)
+        except Exception as e:
+            print("Error: ", e)
+        finally:
+            time.sleep(10)
