@@ -1,5 +1,5 @@
 # Science Birds Basic Game Playing Software
-#### <p style="text-align: center;"> Alpha v 0.3.7 </p>
+#### <p style="text-align: center;"> Alpha v 0.3.8 </p>
 
 ## Table of contents
 1. [Requirements](#Requirements)
@@ -354,7 +354,7 @@ The json object describs an array where each element describes a game object. Ga
 		</tr>	
 		<tr>
 			<td>2</td>
-			<td>Set simulation speed<br />speed$\in$[0.0, 50.0]
+			<td>Set simulation speed<br />speed > 0
 			<br />Note: this command can be sent at anytime during playing to change the simulation speed</td>
 			<td>[2][speed]<br />speed: 4 bytes</td>
 			<td>OK/ERR</td>
@@ -426,9 +426,11 @@ The json object describs an array where each element describes a game object. Ga
 			<td>31</td>
 			<td>Shoot using the Cartesian coordinates [Safe mode*]<br\>
 			</td>
-			<td>[31][x][y][t1][t2]<br/>
-			x : the x coordinate of the release point<br/>
-			y : the y coordinate of the release point<br/>
+			<td>[31][fx][fy][t1][t2]<br/>
+			focus_x : the x coordinate of the focus point<br/>
+			focus_y: the y coordinate of the focus point<br/>
+			dx: the x coordinate of the release point minus focus_x<br/>
+			dy: the y coordinate of the release point minus focus_y<br/>
 			t1: the release time<br/>
 			t2: the gap between the release time and the tap time.<br/>
 			If t1 is set to 0, the server will execute the shot immediately.<br/>
@@ -461,9 +463,11 @@ The json object describs an array where each element describes a game object. Ga
 			<td>38</td>
 			<td>Shoot using the Cartesian coordinates [Safe mode*] with a batch of groundtruth as return value<br\>
 			</td>
-			<td>[31][x][y][t1][t2][requested_gt_frequency]<br/>
-			x : the x coordinate of the release point<br/>
-			y : the y coordinate of the release point<br/>
+			<td>[31][fx][fy][t1][t2][requested_gt_frequency]<br/>
+			focus_x : the x coordinate of the focus point<br/>
+			focus_y: the y coordinate of the focus point<br/>
+			dx: the x coordinate of the release point minus focus_x<br/>
+			dy: the y coordinate of the release point minus focus_y<br/>
 			t1: the release time<br/>
 			t2: the gap between the release time and the tap time.<br/>
 			requested_gt_frequency: indicates how frequent the ground truth is batched
@@ -477,7 +481,7 @@ The json object describs an array where each element describes a game object. Ga
 			<td>41</td>
 			<td>Shoot using the Cartesian coordinates [Fast mode**]<br\>
 			</td>
-			<td>[41][x][y][t1][t2]<br/>
+			<td>[41][fx][fy][t1][t2]<br/>
 			The length of each parameter is 4 bytes</td>
 			<td>OK/ERR</td>
 			<td>[1]/[0]</td>

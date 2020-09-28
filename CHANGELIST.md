@@ -1,3 +1,11 @@
+### List of Changes (release alpha v0.3.8)
+1. Change the implemtation of simulation speed up. Any speed of the simulation gives the same result.
+    - The simulation speed is not capped in the new implementation
+2. Update the noise model for the coordinates of the objects from uniform to Gaussian distribution
+3. Fix the "BindException" issue in game playing interface.
+    - The port in TIME_WAIT state can be connected
+    - If the port is in use, another free port will be used
+
 ### List of Changes (release alpha v0.3.7)
 1. Shooting related commdands changed
     - only release point is needed
